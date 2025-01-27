@@ -14,10 +14,6 @@ using boost::asio::ip::udp;
 RType::Client::Client(boost::asio::io_context& io_context, const std::string& host, short server_port, short client_port)
     : socket_(io_context, udp::endpoint(udp::v4(), client_port)), io_context_(io_context), window(sf::VideoMode(1280, 720), "R-Type Client"), send_timer_(io_context) // Initialize send_timer_
 {
-    keyStates_[sf::Keyboard::Right] = false;
-    keyStates_[sf::Keyboard::Left] = false;
-    keyStates_[sf::Keyboard::Up] = false;
-    keyStates_[sf::Keyboard::Down] = false;
     udp::resolver resolver(io_context);
     udp::resolver::query query(udp::v4(), host, std::to_string(server_port));
     server_endpoint_ = *resolver.resolve(query).begin();
@@ -292,9 +288,7 @@ void RType::Client::processEvents(sf::RenderWindow& window)
             case sf::Event::KeyPressed:
                 handleKeyPress(event.key.code, window);
                 break;
-            case sf::Event::KeyReleased:
-                handleKeyRelease(event.key.code);
-                break;
+
             default:
                 break;
         }
@@ -303,77 +297,57 @@ void RType::Client::processEvents(sf::RenderWindow& window)
 
 void RType::Client::handleKeyPress(sf::Keyboard::Key key, sf::RenderWindow& window)
 {
-    if (keyStates_[key])
-    {
-        keyStates_[key] = true;
-        switch (key) {
+    switch (key) {
         case sf::Keyboard::Right:
-            std::cout << "[DEBUG] Sending Right Start" << std::endl;
-            send_queue_.push(createPacket(Network::PacketType::PLAYER_RIGHT_START));
+            std::cout << "[DEBUG] Sending Right: " << std::endl;
+            send_queue_.push(createPacket(Network::PacketType::PLAYER_RIGHT));
             break;
+
         case sf::Keyboard::Left:
-            std::cout << "[DEBUG] Sending Left Start" << std::endl;
-            send_queue_.push(createPacket(Network::PacketType::PLAYER_LEFT_START));
+            std::cout << "[DEBUG] Sending Left: " << std::endl;
+            send_queue_.push(createPacket(Network::PacketType::PLAYER_LEFT));
             break;
+
         case sf::Keyboard::Up:
-            std::cout << "[DEBUG] Sending Up Start" << std::endl;
-            send_queue_.push(createPacket(Network::PacketType::PLAYER_UP_START));
+            std::cout << "[DEBUG] Sending Up: " << std::endl;
+            send_queue_.push(createPacket(Network::PacketType::PLAYER_UP));
             break;
+
         case sf::Keyboard::Down:
-            std::cout << "[DEBUG] Sending Down Start" << std::endl;
-            send_queue_.push(createPacket(Network::PacketType::PLAYER_DOWN_START));
+            std::cout << "[DEBUG] Sending Down: " << std::endl;
+            send_queue_.push(createPacket(Network::PacketType::PLAYER_DOWN));
             break;
+
         case sf::Keyboard::Q:
             sendExitPacket();
             window.close();
             break;
+
         case sf::Keyboard::M:
-            std::cout << "[DEBUG] Sending M" << std::endl;
+            std::cout << "[DEBUG] Sending M: " << std::endl;
             send_queue_.push(createPacket(Network::PacketType::OPEN_MENU));
             break;
+
         case sf::Keyboard::Space:
-            std::cout << "[DEBUG] Sending Space" << std::endl;
+            std::cout << "[DEBUG] Sending Space: " << std::endl;
             send_queue_.push(createPacket(Network::PacketType::PLAYER_SHOOT));
             break;
+
         case sf::Keyboard::Escape:
             initLobbySprites(window);
             send_queue_.push(createPacket(Network::PacketType::GAME_END));
             break;
+
         case sf::Keyboard::Num1:
             adjustVolume(-5);
             break;
+
         case sf::Keyboard::Num2:
             adjustVolume(5);
             break;
-        default:
-            break;
-        }
-    }
-}
 
-void RType::Client::handleKeyRelease(sf::Keyboard::Key key) {
-    if (keyStates_[key]) {
-        keyStates_[key] = false;
-        switch (key) {
-        case sf::Keyboard::Right:
-            std::cout << "[DEBUG] Sending Right Stop" << std::endl;
-            send_queue_.push(createPacket(Network::PacketType::PLAYER_RIGHT_STOP));
-            break;
-        case sf::Keyboard::Left:
-            std::cout << "[DEBUG] Sending Left Stop" << std::endl;
-            send_queue_.push(createPacket(Network::PacketType::PLAYER_LEFT_STOP));
-            break;
-        case sf::Keyboard::Up:
-            std::cout << "[DEBUG] Sending Up Stop" << std::endl;
-            send_queue_.push(createPacket(Network::PacketType::PLAYER_UP_STOP));
-            break;
-        case sf::Keyboard::Down:
-            std::cout << "[DEBUG] Sending Down Stop" << std::endl;
-            send_queue_.push(createPacket(Network::PacketType::PLAYER_DOWN_STOP));
-            break;
         default:
             break;
-        }
     }
 }
 

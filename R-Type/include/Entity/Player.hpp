@@ -14,9 +14,6 @@ public:
     const Registry& getRegistry() const;
     void setRegistry(const Registry& newRegistry);
 
-    std::pair<float, float> getVelocity() const;
-    void setVelocity(float x, float y);
-
 private:
     Registry registry;
     Registry::Entity entity;

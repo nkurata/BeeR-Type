@@ -17,10 +17,9 @@ class IGame {
 public:
     virtual ~IGame() = default;
 
-    // Pure virtual functions to be implemented by GameState class
+    // Pure virtual functions to be implemented by noe in GameState class
     virtual void update() = 0;
-    virtual void handlePlayerMoveStart(int playerId, int actionId) = 0;
-    virtual void handlePlayerMoveStop(int playerId, int actionId) = 0;
+    virtual void handlePlayerMove(int playerId, int actionId) = 0;
     virtual void killPlayers(int entityId) = 0;
     virtual void killEnemies(int entityId) = 0;
     virtual void killBullets(int entityId) = 0;

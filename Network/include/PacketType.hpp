@@ -28,7 +28,11 @@ namespace Network {
         ENEMY_SHOOT = 12,
         ENEMY_LIFE_UPDATE = 13,
         MAP_UPDATE = 14,
-        GAME_END = 15,      //  //no pos
+        GAME_END = 15,      //
+        PLAYER_RIGHT = 16,  //no pos
+        PLAYER_LEFT = 17,   //no pos
+        PLAYER_UP = 18,     //no pos
+        PLAYER_DOWN = 19,   //no pos
         OPEN_MENU = 20,     //no pos
         MOUSE_CLICK = 21,   //pos
         CREATE_ENEMY = 22,
@@ -41,13 +45,5 @@ namespace Network {
         CHANGE = 29,
         GAME_STARTED = 30,
         GAME_NOT_STARTED = 31,
-        PLAYER_RIGHT_START = 41,
-        PLAYER_RIGHT_STOP = 42,
-        PLAYER_UP_START = 43,
-        PLAYER_UP_STOP = 44,
-        PLAYER_LEFT_START = 45,
-        PLAYER_LEFT_STOP = 46,
-        PLAYER_DOWN_START = 47,
-        PLAYER_DOWN_STOP = 48,
     };
 }
