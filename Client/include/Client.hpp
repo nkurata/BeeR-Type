@@ -5,7 +5,8 @@
 ** Client
 */
 
-#pragma once
+#ifndef CLIENT_HPP
+#define CLIENT_HPP
 
 #include "Packet.hpp"
 
@@ -54,6 +55,7 @@ namespace RType {
         std::string createPacket(Network::PacketType type);
         void adjustVolume(float change);
         void handleKeyPress(sf::Keyboard::Key key, sf::RenderWindow& window);
+        void handleKeyRelease(sf::Keyboard::Key key);
         void sendExitPacket() { send(createPacket(Network::PacketType::DISCONNECTED)); }
 
     private:
@@ -93,5 +95,8 @@ namespace RType {
         sf::Sound sound_shoot_;
         boost::asio::steady_timer send_timer_;
         std::queue<std::string> send_queue_;
+        std::unordered_map<sf::Keyboard::Key, bool> keyStates_;
     };
 }
+
+#endif // CLIENT_HPP
