@@ -8,7 +8,7 @@
 
 GameState::GameState(RType::Server* server)
     : AGame(server), rng(std::random_device()()), distX(0.0f, 800.0f), distY(0.0f, 600.0f),
-      distTime(1000, 5000), currentWave(0), enemiesPerWave(5), m_server(server), nextEnemyId(0), nextBossId(0) {}
+      distTime(1000, 5000), currentWave(0), enemiesPerWave(5), m_server(server), nextEnemyId(0), nextBossId(0), score(0) {}
 
 void GameState::initializeplayers(int numPlayers) {
     for (int i = 0; i < numPlayers; ++i) {
@@ -19,6 +19,7 @@ void GameState::initializeplayers(int numPlayers) {
 void GameState::update() {
     registry.run_systems();
     processPlayerActions();
+    sf::Time elapsed = gameClock.getElapsedTime();
 }
 
 void GameState::run(int numPlayers) {

@@ -13,7 +13,7 @@
 #include "Collidable.hpp"
 #include <iostream>
 
-Player::Player(Registry registry, float x, float y) : registry(registry) {
+Player::Player(Registry registry, float x, float y) : registry(registry), health(100) {
     entity = this->registry.spawn_entity();
     this->registry.add_component<Position>(entity, {x, y});
     this->registry.add_component<Velocity>(entity, {0.0f, 0.0f});

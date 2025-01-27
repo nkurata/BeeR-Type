@@ -33,6 +33,8 @@ private:
     std::uniform_int_distribution<int> distTime;
     int enemiesPerWave;
     std::chrono::steady_clock::time_point lastSpawnTime; 
+    int score;
+    sf::Clock gameClock;
 
     void checkAndKillEntities(Registry::Entity entity1, Registry::Entity entity2);
     const Registry& getEntityRegistry(Registry::Entity entity);
