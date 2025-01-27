@@ -13,8 +13,7 @@ public:
 
     void initializeplayers(int numPlayers);
     void update() override;
-    void handlePlayerMoveStart(int playerId, int actionId) override;
-    void handlePlayerMoveStop(int playerId, int actionId) override;
+    void handlePlayerMove(int playerId, int actionId) override;
     bool isBossSpawned() const;
     bool areEnemiesCleared() const;
     void startNextWave();
@@ -42,8 +41,6 @@ private:
     RType::Server* m_server; // Pointer to RType::Server
     int nextEnemyId;
     int nextBossId;
-    bool moving;
-    std::pair<float, float> moveDirection;
 };
 
 #endif // GAME_STATE_HPP

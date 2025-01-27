@@ -19,9 +19,6 @@ void GameState::initializeplayers(int numPlayers) {
 void GameState::update() {
     registry.run_systems();
     processPlayerActions();
-    for (auto& player : players) {
-        player.move(player.getVelocity().first, player.getVelocity().second);
-    }
 }
 
 void GameState::run(int numPlayers) {
@@ -49,31 +46,21 @@ void GameState::run(int numPlayers) {
     }
 }
 
-void GameState::handlePlayerMoveStart(int playerId, int actionId) {
-    float moveSpeed = 1.0f; // Adjust this value as needed
-    auto& player = players[playerId];
+void GameState::handlePlayerMove(int playerId, int actionId) {
+    float moveDistance = 1.0f;
+    float x = 0.0f;
+    float y = 0.0f;
 
-    switch (actionId) {
-        case 1: // Left
-            player.setVelocity(-moveSpeed, 0.0f);
-            break;
-        case 2: // Right
-            player.setVelocity(moveSpeed, 0.0f);
-            break;
-        case 3: // Up
-            player.setVelocity(0.0f, -moveSpeed);
-            break;
-        case 4: // Down
-            player.setVelocity(0.0f, moveSpeed);
-            break;
-        default:
-            break;
+    if (actionId == 1) { // Left
+        x = -moveDistance;
+    } else if (actionId == 2) { // Right
+        x = moveDistance;
+    } else if (actionId == 3) { // Up
+        y = -moveDistance;
+    } else if (actionId == 4) { // Down
+        y = moveDistance;
     }
-}
-
-void GameState::handlePlayerMoveStop(int playerId, int actionId) {
-    auto& player = players[playerId];
-    player.setVelocity(0.0f, 0.0f);
+    players[playerId].move(x, y);
 }
 
 bool GameState::isBossSpawned() const {
