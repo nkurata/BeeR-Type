@@ -28,12 +28,22 @@ Player::~Player() {
 }
 
 void Player::move(float x, float y) {
-  	if (registry.has_component<Position>(entity)) {
-    	auto& pos = registry.get_components<Position>()[entity];
-   		pos->x += x;
-    	pos->y += y;
+    if (registry.has_component<Position>(entity)) {
+        auto& pos = registry.get_components<Position>()[entity];
+        pos->x += x;
+        pos->y += y;
     } else {
-		std::cerr << "Error: Player entity does not have a Position component." << std::endl;
+        std::cerr << "Error: Player entity does not have a Position component." << std::endl;
+    }
+}
+
+std::pair<float, float> Player::getVelocity() const {
+    if (registry.has_component<Velocity>(entity)) {
+        const auto& velocity = registry.get_components<Velocity>()[entity];
+        return {velocity->vx, velocity->vy};
+    } else {
+        std::cerr << "Error: Player entity does not have a Velocity component." << std::endl;
+        return {0.0f, 0.0f};
     }
 }
 
@@ -47,4 +57,14 @@ const Registry& Player::getRegistry() const {
 
 void Player::setRegistry(const Registry& newRegistry) {
     registry = newRegistry;
+}
+
+void Player::setVelocity(float x, float y) {
+    if (registry.has_component<Velocity>(entity)) {
+        auto& velocity = registry.get_components<Velocity>()[entity];
+        velocity->vx = x;
+        velocity->vy = y;
+    } else {
+        std::cerr << "Error: Player entity does not have a Velocity component." << std::endl;
+    }
 }

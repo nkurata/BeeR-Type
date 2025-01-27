@@ -47,10 +47,14 @@ void AGame::processPlayerActions() {
         int playerId = action.getId();
         int actionId = action.getActionId();
 
-        if (actionId > 0 && actionId < 5) { // Change by real action ID defined in server
-            handlePlayerMove(playerId, actionId);
+        if (actionId > 0 && actionId < 5)
+        {
+            // Change by real action ID defined in server
+            handlePlayerStartMove(playerId, actionId);
             action.setProcessed(true);
             m_server->playerPacketFactory();
+        } else if (actionId > 10 && actionId < 50) {
+            handlePlayerStopMove(playerId, actionId);
         } else if (actionId == 5) { // Change by real action ID defined in server
             spawnBullet(playerId);
             action.setProcessed(true);
@@ -71,6 +75,14 @@ void AGame::deletePlayerAction() { //deletes all process elements from the vecto
 
 const std::vector<PlayerAction>& AGame::getPlayerActions() const {
     return playerActions;
+}
+
+void AGame::handlePlayerStartMove(int playerId, int actionId) {
+    handlePlayerMoveStart(playerId, actionId);
+}
+
+void AGame::handlePlayerStopMove(int playerId, int actionId) {
+    handlePlayerMoveStop(playerId, actionId);
 }
 
 std::pair<float, float> AGame::getPlayerPosition(int playerId) const {

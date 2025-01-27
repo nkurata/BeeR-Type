@@ -37,44 +37,48 @@ namespace RType {
 }
 
 class AGame : public IGame {
-    protected:
-        std::vector<PlayerAction> playerActions; // Shared player action system
-        std::vector<Player> players;
-        std::vector<Enemy> enemies;
-        std::vector<Bullet> bullets;
-        std::vector<Boss> bosses;
-        Registry registry;
-        RType::Server* m_server;
-        std::mutex playerActionsMutex;
+protected:
+    std::vector<PlayerAction> playerActions; // Shared player action system
+    std::vector<Player> players;
+    std::vector<Enemy> enemies;
+    std::vector<Bullet> bullets;
+    std::vector<Boss> bosses;
+    Registry registry;
+    RType::Server* m_server;
+    std::mutex playerActionsMutex;
 
-    public:
-        AGame(RType::Server* server);
-        virtual ~AGame();
+public:
+    AGame(RType::Server* server);
+    virtual ~AGame();
 
-        // Implement player action management functions
-        void addPlayerAction(int playerId, int actionId) override;
-        void processPlayerActions() override;
-        void deletePlayerAction() override;
-        const std::vector<PlayerAction>& getPlayerActions() const override;
+    // Implement player action management functions
+    void addPlayerAction(int playerId, int actionId) override;
+    void processPlayerActions() override;
+    void deletePlayerAction() override;
+    const std::vector<PlayerAction>& getPlayerActions() const override;
 
-        //Getter functions for player, bullet and enemy positions for server to build package to send to client
-        std::pair<float, float> getPlayerPosition(int playerId) const override;
-        std::pair<float, float> getBulletPosition(int bulletId) const override;
-        std::pair<float, float> getEnemyPosition(int enemyId) const override;
-        std::pair<float, float> getBossPosition(int enemyId) const override;
+    // Getter functions for player, bullet and enemy positions for server to build package to send to client
+    std::pair<float, float> getPlayerPosition(int playerId) const override;
+    std::pair<float, float> getBulletPosition(int bulletId) const override;
+    std::pair<float, float> getEnemyPosition(int enemyId) const override;
+    std::pair<float, float> getBossPosition(int enemyId) const override;
 
-        // Implement entity spawn and delete management functions
-        void spawnEnemy(int enemyId, float x, float y) override;
-        void spawnBoss(int boosId, float x, float y) override;
-        void spawnPlayer(int playerId, float x, float y) override;
-        void spawnBullet(int playerId) override;
-        void killBosses(int entityId) override;
-        void killBullets(int entityId) override;
-        void killEnemies(int entityId) override;
-        void killPlayers(int entityId) override;
-        void killEntity(int entityId) override;
+    // Implement entity spawn and delete management functions
+    void spawnEnemy(int enemyId, float x, float y) override;
+    void spawnBoss(int bossId, float x, float y) override;
+    void spawnPlayer(int playerId, float x, float y) override;
+    void spawnBullet(int playerId) override;
+    void killBosses(int entityId) override;
+    void killBullets(int entityId) override;
+    void killEnemies(int entityId) override;
+    void killPlayers(int entityId) override;
+    void killEntity(int entityId) override;
 
-        void registerComponents();
+    void registerComponents();
+
+    // Add missing function declarations
+    virtual void handlePlayerStartMove(int playerId, int actionId);
+    virtual void handlePlayerStopMove(int playerId, int actionId) ;
 };
 
 #endif // AGAME_HPP
