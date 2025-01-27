@@ -1,0 +1,53 @@
+/*
+** EPITECH PROJECT, 2024
+** R-Type [WSL: Ubuntu]
+** File description:
+** PacketType
+*/
+
+#pragma once
+
+#include <cstdint>
+
+#include "Packet.hpp"
+
+namespace Network {
+    enum class PacketType {
+        NONE = 0,
+        REQCONNECT = 1,
+        DISCONNECTED = 2,
+        GAME_START = 3,
+        PLAYER_DEAD = 4,
+        PLAYER_JOIN = 5,
+        PLAYER_SHOOT = 6,
+        PLAYER_HIT = 7,
+        PLAYER_SCORE = 8,
+        ENEMY_SPAWNED = 9,
+        ENEMY_DEAD = 10,
+        ENEMY_MOVED = 11,
+        ENEMY_SHOOT = 12,
+        ENEMY_LIFE_UPDATE = 13,
+        MAP_UPDATE = 14,
+        GAME_END = 15,      //  //no pos
+        OPEN_MENU = 20,     //no pos
+        MOUSE_CLICK = 21,   //pos
+        CREATE_ENEMY = 22,
+        CREATE_BOSS = 23,
+        CREATE_PLAYER = 24,
+        CREATE_BULLET = 25,
+        BACKGROUND = 26,
+        CREATE_POWERUP = 27,
+        DELETE = 28,
+        CHANGE = 29,
+        GAME_STARTED = 30,
+        GAME_NOT_STARTED = 31,
+        PLAYER_RIGHT_START = 41,
+        PLAYER_RIGHT_STOP = 42,
+        PLAYER_UP_START = 43,
+        PLAYER_UP_STOP = 44,
+        PLAYER_LEFT_START = 45,
+        PLAYER_LEFT_STOP = 46,
+        PLAYER_DOWN_START = 47,
+        PLAYER_DOWN_STOP = 48,
+    };
+}
