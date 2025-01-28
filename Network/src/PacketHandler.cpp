@@ -235,25 +235,25 @@ void PacketHandler::handlePlayerDownStart(const Network::Packet &packet)
 void PacketHandler::handlePlayerRightStop(const Network::Packet &packet)
 {
     std::cout << "[PacketHandler] Handeled PLAYER_RIGHT packet." << std::endl;
-    handlePlayerAction(packet, 20);
+    handlePlayerAction(packet, 12);
 }
 
 void PacketHandler::handlePlayerLeftStop(const Network::Packet &packet)
 {
     std::cout << "[PacketHandler] Handeled PLAYER_LEFT packet." << std::endl;
-    handlePlayerAction(packet, 10);
+    handlePlayerAction(packet, 11);
 }
 
 void PacketHandler::handlePlayerUpStop(const Network::Packet &packet)
 {
     std::cout << "[PacketHandler] Handled PLAYER_UP packet." << std::endl;
-    handlePlayerAction(packet, 30);
+    handlePlayerAction(packet, 13);
 }
 
 void PacketHandler::handlePlayerDownStop(const Network::Packet &packet)
 {
     std::cout << "[PacketHandler] Handeled PLAYER_DOWN packet." << std::endl;
-    handlePlayerAction(packet, 40);
+    handlePlayerAction(packet, 14);
 }
 
 void PacketHandler::handleOpenMenu(const Network::Packet &packet)

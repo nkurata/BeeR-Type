@@ -76,7 +76,6 @@ public:
 
     void registerComponents();
 
-    // Add missing function declarations
     virtual void handlePlayerStartMove(int playerId, int actionId);
     virtual void handlePlayerStopMove(int playerId, int actionId) ;
 };

@@ -44,6 +44,9 @@ public:
     virtual void processPlayerActions() = 0;
     virtual void deletePlayerAction() = 0;
     virtual const std::vector<PlayerAction>& getPlayerActions() const = 0;
+
+    virtual void handlePlayerStartMove(int playerId, int actionId);
+    virtual void handlePlayerStopMove(int playerId, int actionId);
 };
 
 #endif // IGAME_HPP

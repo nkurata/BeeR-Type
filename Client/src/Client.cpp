@@ -303,8 +303,7 @@ void RType::Client::processEvents(sf::RenderWindow& window)
 
 void RType::Client::handleKeyPress(sf::Keyboard::Key key, sf::RenderWindow& window)
 {
-    if (keyStates_[key])
-    {
+    if (!keyStates_[key]) {
         keyStates_[key] = true;
         switch (key) {
         case sf::Keyboard::Right:
