@@ -9,8 +9,8 @@ add_definitions(-DBOOST_BIND_GLOBAL_PLACEHOLDERS)
 
 # Local includes if needed
 include_directories(
-    ${CMAKE_SOURCE_DIR}/R-Type/include
-    ${CMAKE_SOURCE_DIR}/R-Type/include/Entity
+    ${CMAKE_SOURCE_DIR}/BeeR-Type/include
+    ${CMAKE_SOURCE_DIR}/GameEngine/include/
     ${CMAKE_SOURCE_DIR}/ECS
     ${CMAKE_SOURCE_DIR}/ECS/systems
     ${CMAKE_SOURCE_DIR}/ECS/components

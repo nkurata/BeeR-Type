@@ -141,6 +141,7 @@ void RType::Client::drawSprites(sf::RenderWindow& window)
     for (auto& spriteElement : sprites_) {
         window.draw(spriteElement.sprite);
     }
+    ui.render(window); // Add this line to render the UI
 }
 
 void RType::Client::updateSpritePosition()
@@ -166,6 +167,11 @@ void RType::Client::parseMessage(std::string packet_data)
     std::cout << "[DEBUG] Received Packet Type: " << static_cast<int>(packet_type) << std::endl;
     std::cout << "[DEBUG] Received Packet Data: " << packet_inside << std::endl;
 
+    if (packet_type == static_cast<uint8_t>(Network::PacketType::UI_UPDATE)) {
+        handleUIUpdate(packet_inside); // Add this line to handle UI updates
+        return;
+    }
+
     std::vector<std::string> elements;
     std::stringstream ss(packet_inside);
     std::string segment;
@@ -189,6 +195,43 @@ void RType::Client::parseMessage(std::string packet_data)
     } catch (const std::exception& e) {
         std::cerr << "[ERROR] Failed to parse packet data: " << e.what() << std::endl;
     }
+}
+
+void RType::Client::handleUIUpdate(const std::string& data) {
+    std::vector<std::string> elements;
+    std::stringstream ss(data);
+    std::string segment;
+    while (std::getline(ss, segment, ';')) {
+        elements.push_back(segment);
+    }
+
+    float score = 0;
+    float gameTime = 0;
+    std::vector<Player> players;
+
+    for (const auto& element : elements) {
+        std::vector<std::string> keyValue;
+        std::stringstream kv(element);
+        std::string item;
+        while (std::getline(kv, item, ':')) {
+            keyValue.push_back(item);
+        }
+        if (keyValue.size() != 2) continue;
+
+        if (keyValue[0] == "Score") {
+            score = std::stof(keyValue[1]);
+        } else if (keyValue[0] == "Time") {
+            gameTime = std::stof(keyValue[1]);
+        } else if (keyValue[0].find("Player") != std::string::npos) {
+            int playerId = std::stoi(keyValue[0].substr(6));
+            int health = std::stoi(keyValue[1]);
+            Player player; // Assuming Player has a default constructor
+            player.setHealth(health); // Assuming Player has a setHealth method
+            players.push_back(player);
+        }
+    }
+
+    ui.update(score, gameTime, players);
 }
 
 void RType::Client::resetValues()
