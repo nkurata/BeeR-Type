@@ -19,6 +19,11 @@ RType::Client::Client(boost::asio::io_context& io_context, const std::string& ho
     server_endpoint_ = *resolver.resolve(query).begin();
     std::cout << "Connected to " << host << ":" << server_port << " from client port " << client_port << std::endl;
 
+    if (!font_.loadFromFile("../assets/font.otf")) {
+        std::cerr << "[ERROR] Failed to load font" << std::endl;
+        std::exit(EXIT_FAILURE);
+    }
+
     start_receive();
     start_send_timer(); // Start the send timer
     receive_thread_ = std::thread(&Client::run_receive, this);
@@ -26,11 +31,13 @@ RType::Client::Client(boost::asio::io_context& io_context, const std::string& ho
 
 RType::Client::~Client()
 {
+    std::cout << "[DEBUG] Client destructor called" << std::endl;
     io_context_.stop();
-    socket_.close();
     if (receive_thread_.joinable()) {
         receive_thread_.join();
     }
+    socket_.close();
+    std::cout << "[DEBUG] Client destructor finished" << std::endl;
 }
 
 void RType::Client::send(const std::string& message)
@@ -71,7 +78,7 @@ void RType::Client::handle_receive(const boost::system::error_code& error, std::
 void RType::Client::handle_send(const boost::system::error_code& error, std::size_t bytes_transferred)
 {
     if (!error) {
-        // std::cout << "[DEBUG] Message sent." << std::endl;
+         std::cout << "[DEBUG] Message sent." << std::endl;
     } else {
         std::cerr << "[DEBUG] Error sending: " << error.message() << std::endl;
     }
@@ -126,7 +133,7 @@ void RType::Client::destroySprite()
     }
 }
 
-void RType::Client::loadTextures() //make sure to have the right textures in the right folder
+void RType::Client::loadTextures()
 {
     textures_[RType::SpriteType::Enemy].loadFromFile("../assets/enemy.png");
     textures_[RType::SpriteType::Boss].loadFromFile("../assets/boss.png");
@@ -144,7 +151,7 @@ void RType::Client::drawSprites(sf::RenderWindow& window)
     for (auto& text : player_texts_) {
         window.draw(text);
     }
-    // ui.render(window); // Add this line to render the UI
+    // ui.render(window);
 }
 
 void RType::Client::updateSpritePosition()
@@ -170,7 +177,7 @@ void RType::Client::parseMessage(std::string packet_data)
     std::cout << "[DEBUG] Received Packet Type: " << static_cast<int>(packet_type) << std::endl;
     std::cout << "[DEBUG] Received Packet Data: " << packet_inside << std::endl;
 
-    if (packet_type == static_cast<uint8_t>(Network::PacketType::HEARTBEAT)) { // Handle heartbeat message
+    if (packet_type == static_cast<uint8_t>(Network::PacketType::HEARTBEAT)) {
         std::cout << "[DEBUG] Handling HEARTBEAT packet." << std::endl;
         handleHeartbeatMessage(packet_inside);
         return;
@@ -202,29 +209,9 @@ void RType::Client::parseMessage(std::string packet_data)
 }
 
 void RType::Client::handleHeartbeatMessage(const std::string& data) {
-    std::cout << "[DEBUG] Inside handleHeartbeatMessage." << std::endl;
-    std::vector<std::string> elements;
-    std::stringstream ss(data);
-    std::string segment;
-    while (std::getline(ss, segment, ';')) {
-        elements.push_back(segment);
-    }
-
-    for (const auto& element : elements) {
-        std::vector<std::string> keyValue;
-        std::stringstream kv(element);
-        std::string item;
-        while (std::getline(kv, item, ':')) {
-            keyValue.push_back(item);
-        }
-        if (keyValue.size() != 2) continue;
-
-        if (keyValue[0] == "Clients") {
-            int numClients = std::stoi(keyValue[1]);
-            std::cout << "[DEBUG] Number of clients: " << numClients << std::endl;
-            updateLobbySprites(numClients);
-        }
-    }
+    int numClients = std::stoi(data);
+    std::cout << "[DEBUG] Handling HEARTBEAT packet. Number of clients: " << numClients << std::endl;
+    updateLobbySprites(numClients);
 }
 
 void RType::Client::updateLobbySprites(int numClients) {
@@ -402,6 +389,7 @@ void RType::Client::adjustVolume(float change)
 
 void RType::Client::initLobbySprites(sf::RenderWindow& window)
 {
+    std::cout << "[DEBUG] Initializing lobby sprites" << std::endl;
     sprites_.clear();
     player_texts_.clear(); // Clear previous texts
 
@@ -434,6 +422,7 @@ void RType::Client::initLobbySprites(sf::RenderWindow& window)
         playerText.setPosition(50, 150 + i * 100); // Position text below the sprite
         player_texts_.push_back(playerText);
     }
+    std::cout << "[DEBUG] Lobby sprites initialized" << std::endl;
 }
 
 void RType::Client::start_send_timer() {

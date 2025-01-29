@@ -28,6 +28,7 @@ RType::Server::Server(boost::asio::io_context& io_context, short port, ThreadSaf
 
 RType::Server::~Server()
 {
+    heartbeat_timer_.cancel();
     socket_.close();
 }
 
