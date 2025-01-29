@@ -26,7 +26,7 @@ add_library(ClientLib ${CLIENT_SOURCES})
 
 # Link with R-Type if it uses game logic, Boost if needed, SFML if needed, ECSLib, etc.
 target_link_libraries(ClientLib
-    R-Type
+    # R-Type
     Boost::Boost
     SFML::SFML
     ECSLib

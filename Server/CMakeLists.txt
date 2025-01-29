@@ -30,7 +30,7 @@ set(SERVER_SOURCES
 add_library(ServerLib ${SERVER_SOURCES})
 
 target_link_libraries(ServerLib
-    R-Type
+    # R-Type
     Boost::Boost
     SFML::SFML
     ECSLib

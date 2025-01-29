@@ -30,12 +30,12 @@ using namespace boost::placeholders; // Used for Boost.Asio asynchronous operati
 namespace RType {
     class Server {
     public:
-        Server(boost::asio::io_context& io_context, short port, ThreadSafeQueue<Network::Packet>& packetQueue, GameState* game = nullptr);
+        Server(boost::asio::io_context& io_context, short port, ThreadSafeQueue<Network::Packet>& packetQueue);
         ~Server();
         void handle_receive(const boost::system::error_code& error, std::size_t bytes_transferred);
         void send_to_client(const std::string& message, const boost::asio::ip::udp::endpoint& client_endpoint);
 
-        void setGameState(GameState* game);
+        // void setGameState(GameState* game);
         void Broadcast(const std::string& message);
         bool hasPositionChanged(int id, float x, float y, std::unordered_map<int, std::pair<float, float>>& lastKnownPositions);
         Network::ReqConnect reqConnectData(boost::asio::ip::udp::endpoint& client_endpoint);
@@ -52,7 +52,7 @@ namespace RType {
         std::mutex clients_mutex_;
         bool m_running;
 
-        void loadRtypeGame();
+        // void loadRtypeGame();
     private:
         using PacketHandler = std::function<void(const std::vector<std::string>&)>;
         void start_receive();
@@ -69,8 +69,8 @@ namespace RType {
         boost::asio::steady_timer send_timer_; // Add this line
         std::queue<uint32_t> available_ids_;
 
-        void *RtypeGame;
-        RType::GameState* (*createRtypeGame)(RType::Server* server);
+        // void *RtypeGame;
+        // RType::GameState* (*createRtypeGame)(RType::Server* server);
     };
 }
 

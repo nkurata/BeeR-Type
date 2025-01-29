@@ -18,8 +18,8 @@ using boost::asio::ip::udp;
  * @param io_context The io_context object used for asynchronous operations.
  * @param port The port number on which the server will listen for incoming UDP packets.
  */
-RType::Server::Server(boost::asio::io_context& io_context, short port, ThreadSafeQueue<Network::Packet>& packetQueue, GameState* game)
-: socket_(io_context, udp::endpoint(udp::v4(), port)), m_packetQueue(packetQueue), m_game(game), _nbClients(0), m_running(false), send_timer_(io_context) // Initialize send_timer_
+RType::Server::Server(boost::asio::io_context& io_context, short port, ThreadSafeQueue<Network::Packet>& packetQueue)
+: socket_(io_context, udp::endpoint(udp::v4(), port)), m_packetQueue(packetQueue), _nbClients(0), m_running(false), send_timer_(io_context) // Initialize send_timer_
 {
     start_receive();
     start_send_timer(); // Start the send timer
@@ -30,9 +30,9 @@ RType::Server::~Server()
     socket_.close();
 }
 
-void RType::Server::setGameState(GameState* game) {
-    m_game = game;
-}
+// void RType::Server::setGameState(GameState* game) {
+//     m_game = game;
+// }
 //SEND MESSAGES
 
 void RType::Server::send_to_client(const std::string& message, const udp::endpoint& client_endpoint)
@@ -193,25 +193,6 @@ bool RType::Server::hasPositionChanged(int id, float x, float y, std::unordered_
     return false;
 }
 
-void RType::Server::playerPacketFactory() {
-    // Removed game-specific function
-}
-
-void RType::Server::enemyPacketFactory() {
-    // Removed game-specific function
-}
-
-void RType::Server::bulletPacketFactory() {
-    // Removed game-specific function
-}
-
-void RType::Server::bossPacketFactory() {
-    // Removed game-specific function
-}
-
-void RType::Server::PacketFactory() {
-    // Removed game-specific function
-}
 
 void RType::Server::start_send_timer() {
     send_timer_.expires_after(std::chrono::milliseconds(1));

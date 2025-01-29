@@ -13,8 +13,8 @@ set(SERVER_BINARY "r-type_server")
 add_definitions(-DBOOST_BIND_GLOBAL_PLACEHOLDERS)
 
 include_directories(
-    ${CMAKE_SOURCE_DIR}/GameEngine/include
-    ${CMAKE_SOURCE_DIR}/BeeR-Type/include/
+    # ${CMAKE_SOURCE_DIR}/GameEngine/include
+    # ${CMAKE_SOURCE_DIR}/BeeR-Type/include/
     ${CMAKE_SOURCE_DIR}/Network
     ${CMAKE_SOURCE_DIR}/Network/include
     ${CMAKE_SOURCE_DIR}/Server/
@@ -31,8 +31,8 @@ add_subdirectory(ECS)
 add_subdirectory(Network)
 add_subdirectory(Client)
 add_subdirectory(Server)
-add_subdirectory(GameEngine)
-add_subdirectory(BeeR-Type)
+# add_subdirectory(GameEngine)
+# add_subdirectory(BeeR-Type)
 
 # --- FetchContent setup ---
 include(FetchContent)
@@ -91,13 +91,11 @@ target_link_libraries(SFML INTERFACE
     sfml-audio
 )
 
-
 # Add executables for client/server "main.cpp"
 # Client main
 add_executable(r-type_client Client/main.cpp)
 target_link_libraries(r-type_client
     ClientLib
-    R-Type
     Boost::Boost
     SFML::SFML
 )
@@ -106,7 +104,6 @@ target_link_libraries(r-type_client
 add_executable(r-type_server Server/main.cpp)
 target_link_libraries(r-type_server
     ServerLib
-    R-Type
     Boost::Boost
     SFML::SFML
 )

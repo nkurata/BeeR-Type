@@ -13,7 +13,7 @@
 using namespace Network;
 
 // Constructor
-PacketHandler::PacketHandler(ThreadSafeQueue<Network::Packet>& queue, GameState& game, RType::Server& server) : m_queue(queue), m_game(game), m_server(server)
+PacketHandler::PacketHandler(ThreadSafeQueue<Network::Packet>& queue, RType::Server& server) : m_queue(queue), m_server(server)
 {
     initializeHandlers();
 }
@@ -107,7 +107,7 @@ void PacketHandler::handleGameStart(const Network::Packet &packet)
         m_server.Broadcast(m_server.createPacket(Network::PacketType::GAME_START, ""));
     }
     std::thread gameThread([this, numPlayers] {
-        m_game.run(numPlayers);
+        // m_game.run(numPlayers);
     });
     gameThread.detach();
 }
@@ -144,7 +144,7 @@ void PacketHandler::handlePlayerShoot(const Network::Packet &packet)
             }
         }
     } if (found) {
-        m_game.spawnBullet(playerId);
+        // m_game.spawnBullet(playerId);
     } else {
         std::cerr << "[PacketHandler] Client endpoint not found in client list." << std::endl;
     }
@@ -260,7 +260,7 @@ void PacketHandler::handlePlayerAction(const Network::Packet &packet, int action
         }
     }
     if (found) {
-        m_game.addPlayerAction(playerId, action);
+        // m_game.addPlayerAction(playerId, action);
     } else {
         std::cerr << "[PacketHandler] Client endpoint not found in client list." << std::endl;
     }
