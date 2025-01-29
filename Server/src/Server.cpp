@@ -19,9 +19,9 @@ using boost::asio::ip::udp;
  * @param port The port number on which the server will listen for incoming UDP packets.
  */
 RType::Server::Server(boost::asio::io_context& io_context, short port, ThreadSafeQueue<Network::Packet>& packetQueue)
-: socket_(io_context, udp::endpoint(udp::v4(), port)), m_packetQueue(packetQueue), _nbClients(0), m_running(false), send_timer_(io_context), heartbeat_timer_(io_context) // Initialize timers
+: socket_(io_context, udp::endpoint(udp::v4(), port)), m_packetQueue(packetQueue), _nbClients(0), m_running(false), send_timer_(io_context), heartbeat_timer_(io_context), receive_timer_(io_context) // Initialize timers
 {
-    start_receive();
+    regulate_receive();
     start_send_timer(); // Start the send timer
     start_heartbeat_timer(); // Start the heartbeat timer
 }
@@ -94,12 +94,10 @@ void RType::Server::handle_receive(const boost::system::error_code &error, std::
         Network::Packet packet;
         packet.type = deserializePacket(received_data).type;
         m_packetQueue.push(packet);
-        start_receive();
-    }
-    else {
+    } else {
         std::cerr << "[ERROR] Error receiving: " << error.message() << std::endl;
-        start_receive();
     }
+    regulate_receive(); // Regulate the frequency of receive operations
 }
 
 Network::Packet RType::Server::deserializePacket(const std::string& packet_str)
@@ -223,15 +221,30 @@ void RType::Server::start_heartbeat_timer() {
     heartbeat_timer_.async_wait(boost::bind(&Server::handle_heartbeat_timer, this, boost::asio::placeholders::error));
 }
 
+std::string RType::Server::createHeartbeatMessage(int ping) {
+    std::ostringstream message;
+    message << static_cast<uint8_t>(Network::PacketType::HEARTBEAT) << ";";
+    message << clients_.size() << ";"; // Number of clients
+    message << ping; // Ping value
+    return message.str();
+}
+
 void RType::Server::handle_heartbeat_timer(const boost::system::error_code& error) {
     if (!error) {
         std::lock_guard<std::mutex> lock(clients_mutex_);
         for (const auto& client : clients_) {
-            send_to_client(createPacket(Network::PacketType::HEARTBEAT, std::to_string(clients_.size())), client.second.getEndpoint());
+            int ping = 50; // Calculate the ping for the client
+            send_to_client(createHeartbeatMessage(ping), client.second.getEndpoint());
         }
         start_heartbeat_timer(); // Restart the timer
     } else {
         std::cerr << "[DEBUG] Heartbeat timer error: " << error.message() << std::endl;
     }
+}
+
+void RType::Server::regulate_receive()
+{
+    receive_timer_.expires_after(std::chrono::milliseconds(10)); // Set the interval to 10 milliseconds
+    receive_timer_.async_wait(boost::bind(&Server::start_receive, this));
 }
 

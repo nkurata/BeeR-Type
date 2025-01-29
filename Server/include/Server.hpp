@@ -57,10 +57,11 @@ namespace RType {
         using PacketHandler = std::function<void(const std::vector<std::string>&)>;
         void start_receive();
         uint32_t createClient(boost::asio::ip::udp::endpoint& client_endpoint);
-        void start_send_timer(); // Add this line
-        void handle_send_timer(const boost::system::error_code& error); // Add this line
+        void start_send_timer();
+        void handle_send_timer(const boost::system::error_code& error);
         void start_heartbeat_timer();
         void handle_heartbeat_timer(const boost::system::error_code& error);
+        void regulate_receive(); // Add this line
 
         udp::socket socket_;
         udp::endpoint remote_endpoint_;
@@ -68,13 +69,15 @@ namespace RType {
         ThreadSafeQueue<Network::Packet>& m_packetQueue;
         std::unordered_map<std::string, std::function<void(const std::vector<std::string>&)>> packet_handlers_;
         std::unordered_map<Network::PacketType, void(*)(const Network::Packet&)> m_handlers;        
-        std::queue<std::string> send_queue_; // Add this line
-        boost::asio::steady_timer send_timer_; // Add this line
-        boost::asio::steady_timer heartbeat_timer_; // Add this line
+        std::queue<std::string> send_queue_;
+        boost::asio::steady_timer send_timer_;
+        boost::asio::steady_timer heartbeat_timer_;
+        boost::asio::steady_timer receive_timer_; // Add this line
         std::queue<uint32_t> available_ids_;
 
         // void *RtypeGame;
         // RType::GameState* (*createRtypeGame)(RType::Server* server);
+        std::string createHeartbeatMessage(int ping);
     };
 }
 
