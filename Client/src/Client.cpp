@@ -141,6 +141,9 @@ void RType::Client::drawSprites(sf::RenderWindow& window)
     for (auto& spriteElement : sprites_) {
         window.draw(spriteElement.sprite);
     }
+    for (auto& text : player_texts_) {
+        window.draw(text);
+    }
     // ui.render(window); // Add this line to render the UI
 }
 
@@ -167,10 +170,11 @@ void RType::Client::parseMessage(std::string packet_data)
     std::cout << "[DEBUG] Received Packet Type: " << static_cast<int>(packet_type) << std::endl;
     std::cout << "[DEBUG] Received Packet Data: " << packet_inside << std::endl;
 
-    // if (packet_type == static_cast<uint8_t>(Network::PacketType::UI_UPDATE)) {
-    //     handleUIUpdate(packet_inside);
-    //     return;
-    // }
+    if (packet_type == static_cast<uint8_t>(Network::PacketType::HEARTBEAT)) { // Handle heartbeat message
+        std::cout << "[DEBUG] Handling HEARTBEAT packet." << std::endl;
+        handleHeartbeatMessage(packet_inside);
+        return;
+    }
 
     std::vector<std::string> elements;
     std::stringstream ss(packet_inside);
@@ -197,42 +201,36 @@ void RType::Client::parseMessage(std::string packet_data)
     }
 }
 
-// void RType::Client::handleUIUpdate(const std::string& data) {
-//     std::vector<std::string> elements;
-//     std::stringstream ss(data);
-//     std::string segment;
-//     while (std::getline(ss, segment, ';')) {
-//         elements.push_back(segment);
-//     }
+void RType::Client::handleHeartbeatMessage(const std::string& data) {
+    std::cout << "[DEBUG] Inside handleHeartbeatMessage." << std::endl;
+    std::vector<std::string> elements;
+    std::stringstream ss(data);
+    std::string segment;
+    while (std::getline(ss, segment, ';')) {
+        elements.push_back(segment);
+    }
 
-//     float score = 0;
-//     float gameTime = 0;
-//     std::vector<Player> players;
+    for (const auto& element : elements) {
+        std::vector<std::string> keyValue;
+        std::stringstream kv(element);
+        std::string item;
+        while (std::getline(kv, item, ':')) {
+            keyValue.push_back(item);
+        }
+        if (keyValue.size() != 2) continue;
 
-//     for (const auto& element : elements) {
-//         std::vector<std::string> keyValue;
-//         std::stringstream kv(element);
-//         std::string item;
-//         while (std::getline(kv, item, ':')) {
-//             keyValue.push_back(item);
-//         }
-//         if (keyValue.size() != 2) continue;
+        if (keyValue[0] == "Clients") {
+            int numClients = std::stoi(keyValue[1]);
+            std::cout << "[DEBUG] Number of clients: " << numClients << std::endl;
+            updateLobbySprites(numClients);
+        }
+    }
+}
 
-//         if (keyValue[0] == "Score") {
-//             score = std::stof(keyValue[1]);
-//         } else if (keyValue[0] == "Time") {
-//             gameTime = std::stof(keyValue[1]);
-//         } else if (keyValue[0].find("Player") != std::string::npos) {
-//             int playerId = std::stoi(keyValue[0].substr(6));
-//             int health = std::stoi(keyValue[1]);
-//             Player player; // Assuming Player has a default constructor
-//             player.setHealth(health); // Assuming Player has a setHealth method
-//             players.push_back(player);
-//         }
-//     }
-
-//     ui.update(score, gameTime, players);
-// }
+void RType::Client::updateLobbySprites(int numClients) {
+    num_clients_ = numClients; // Store the number of clients
+    initLobbySprites(window); // Reinitialize lobby sprites with the updated number of clients
+}
 
 void RType::Client::resetValues()
 {
@@ -405,6 +403,7 @@ void RType::Client::adjustVolume(float change)
 void RType::Client::initLobbySprites(sf::RenderWindow& window)
 {
     sprites_.clear();
+    player_texts_.clear(); // Clear previous texts
 
     SpriteElement backgroundElement;
     backgroundElement.sprite.setTexture(textures_[SpriteType::Background]);
@@ -418,6 +417,23 @@ void RType::Client::initLobbySprites(sf::RenderWindow& window)
 
     sprites_.push_back(backgroundElement);
     sprites_.push_back(buttonElement);
+
+    // Add player sprites and texts on the left side of the screen
+    for (int i = 0; i < num_clients_; ++i) {
+        SpriteElement playerElement;
+        playerElement.sprite.setTexture(textures_[SpriteType::Player]);
+        playerElement.sprite.setPosition(50, 100 + i * 100); // Adjust position as needed
+        playerElement.id = i;
+        sprites_.push_back(playerElement);
+
+        sf::Text playerText;
+        playerText.setFont(font_);
+        playerText.setString("Player " + std::to_string(i + 1));
+        playerText.setCharacterSize(24);
+        playerText.setFillColor(sf::Color::White);
+        playerText.setPosition(50, 150 + i * 100); // Position text below the sprite
+        player_texts_.push_back(playerText);
+    }
 }
 
 void RType::Client::start_send_timer() {

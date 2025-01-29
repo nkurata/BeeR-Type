@@ -19,10 +19,11 @@ using boost::asio::ip::udp;
  * @param port The port number on which the server will listen for incoming UDP packets.
  */
 RType::Server::Server(boost::asio::io_context& io_context, short port, ThreadSafeQueue<Network::Packet>& packetQueue)
-: socket_(io_context, udp::endpoint(udp::v4(), port)), m_packetQueue(packetQueue), _nbClients(0), m_running(false), send_timer_(io_context) // Initialize send_timer_
+: socket_(io_context, udp::endpoint(udp::v4(), port)), m_packetQueue(packetQueue), _nbClients(0), m_running(false), send_timer_(io_context), heartbeat_timer_(io_context) // Initialize timers
 {
     start_receive();
     start_send_timer(); // Start the send timer
+    start_heartbeat_timer(); // Start the heartbeat timer
 }
 
 RType::Server::~Server()
@@ -215,3 +216,21 @@ void RType::Server::handle_send_timer(const boost::system::error_code& error) {
         std::cerr << "[DEBUG] Timer error: " << error.message() << std::endl;
     }
 }
+
+void RType::Server::start_heartbeat_timer() {
+    heartbeat_timer_.expires_after(std::chrono::seconds(1)); // Set heartbeat interval
+    heartbeat_timer_.async_wait(boost::bind(&Server::handle_heartbeat_timer, this, boost::asio::placeholders::error));
+}
+
+void RType::Server::handle_heartbeat_timer(const boost::system::error_code& error) {
+    if (!error) {
+        std::lock_guard<std::mutex> lock(clients_mutex_);
+        for (const auto& client : clients_) {
+            send_to_client(createPacket(Network::PacketType::HEARTBEAT, std::to_string(clients_.size())), client.second.getEndpoint());
+        }
+        start_heartbeat_timer(); // Restart the timer
+    } else {
+        std::cerr << "[DEBUG] Heartbeat timer error: " << error.message() << std::endl;
+    }
+}
+

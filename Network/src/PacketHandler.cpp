@@ -62,6 +62,7 @@ void PacketHandler::initializeHandlers() {
     m_handlers[Network::PacketType::PLAYER_UP] = std::bind(&PacketHandler::handlePlayerUp, this, std::placeholders::_1);
     m_handlers[Network::PacketType::PLAYER_DOWN] = std::bind(&PacketHandler::handlePlayerDown, this, std::placeholders::_1);
     m_handlers[Network::PacketType::OPEN_MENU] = std::bind(&PacketHandler::handleOpenMenu, this, std::placeholders::_1);
+    m_handlers[Network::PacketType::HEARTBEAT] = std::bind(&PacketHandler::handleHeartbeat, this, std::placeholders::_1);
 }
 
 void PacketHandler::handlePacket(const Network::Packet &packet) {
@@ -231,6 +232,12 @@ void PacketHandler::handlePlayerDown(const Network::Packet &packet)
 void PacketHandler::handleOpenMenu(const Network::Packet &packet)
 {
     std::cout << "[PacketHandler] Handeled OPEN_MENU packet." << std::endl;
+}
+
+void PacketHandler::handleHeartbeat(const Network::Packet &packet) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    std::cout << "[PacketHandler] Handled HEARTBEAT packet." << std::endl;
+    // Handle the heartbeat packet if needed
 }
 
 void PacketHandler::handlePlayerAction(const Network::Packet &packet, int action)

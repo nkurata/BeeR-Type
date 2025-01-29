@@ -62,5 +62,6 @@ namespace Network {
         std::mutex m_mutex;
 
         std::unordered_map<Network::PacketType, std::function<void(const Network::Packet&)>> m_handlers;
+        void handleHeartbeat(const Network::Packet &packet);
     };
 }

@@ -75,6 +75,8 @@ namespace RType {
         void start_send_timer();
         void handle_send_timer(const boost::system::error_code& error);
         // void handleUIUpdate(const std::string& data);
+        void handleHeartbeatMessage(const std::string& data);
+        void updateLobbySprites(int numClients);
 
         sf::RenderWindow window;
         boost::asio::ip::udp::socket socket_;
@@ -95,6 +97,9 @@ namespace RType {
         sf::Sound sound_shoot_;
         boost::asio::steady_timer send_timer_;
         std::queue<std::string> send_queue_;
+        int num_clients_;
+        std::vector<sf::Text> player_texts_;
+        sf::Font font_; // Add this line
         // UI ui;
     };
 }
