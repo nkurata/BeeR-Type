@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 include_directories(
-    ${CMAKE_SOURCE_DIR}/Game/include
+    ${CMAKE_SOURCE_DIR}/BeeR-Type/include
     ${CMAKE_SOURCE_DIR}/GameEngine/include/
     ${CMAKE_SOURCE_DIR}/ECS
     ${CMAKE_SOURCE_DIR}/ECS/systems
@@ -18,9 +18,10 @@ set(GAME_SOURCES
     src/Enemy.cpp
     src/Bullet.cpp
     src/Boss.cpp
+    src/Game.cpp
 )
 
-add_library(GameLib ${GAME_SOURCES})
+add_library(GameLib SHARED ${GAME_SOURCES})
 
 target_link_libraries(GameLib
     ECSLib

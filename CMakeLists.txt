@@ -14,7 +14,7 @@ add_definitions(-DBOOST_BIND_GLOBAL_PLACEHOLDERS)
 
 include_directories(
     ${CMAKE_SOURCE_DIR}/GameEngine/include
-    ${CMAKE_SOURCE_DIR}/Game/include/
+    ${CMAKE_SOURCE_DIR}/BeeR-Type/include/
     ${CMAKE_SOURCE_DIR}/Network
     ${CMAKE_SOURCE_DIR}/Network/include
     ${CMAKE_SOURCE_DIR}/Server/

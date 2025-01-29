@@ -19,7 +19,6 @@ include_directories(
 
 # The R-Type "core" library sources
 set(RTYPE_SOURCES
-    src/GameState.cpp
     src/AGame.cpp
     src/PlayerAction.cpp
 )

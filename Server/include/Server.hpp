@@ -20,7 +20,6 @@
 #include "ThreadSafeQueue.hpp"
 #include "Packet.hpp"
 #include "ClientRegister.hpp"
-#include "GameState.hpp"
 
 typedef std::map<uint32_t, ClientRegister> ClientList;
 
@@ -52,6 +51,8 @@ namespace RType {
         uint32_t _nbClients;
         std::mutex clients_mutex_;
         bool m_running;
+
+        void loadRtypeGame();
     private:
         using PacketHandler = std::function<void(const std::vector<std::string>&)>;
         void start_receive();
@@ -64,11 +65,12 @@ namespace RType {
         std::array<char, 1024> recv_buffer_;
         ThreadSafeQueue<Network::Packet>& m_packetQueue;
         std::unordered_map<std::string, std::function<void(const std::vector<std::string>&)>> packet_handlers_;
-        std::unordered_map<Network::PacketType, void(*)(const Network::Packet&)> m_handlers;
-        GameState* m_game;
-        std::queue<std::string> send_queue_; // Add this line
+        std::unordered_map<Network::PacketType, void(*)(const Network::Packet&)> m_handlers;        std::queue<std::string> send_queue_; // Add this line
         boost::asio::steady_timer send_timer_; // Add this line
         std::queue<uint32_t> available_ids_;
+
+        void *RtypeGame;
+        RType::GameState* (*createRtypeGame)(RType::Server* server);
     };
 }
 

@@ -5,7 +5,6 @@
 ** AGame
 */
 
-#include "GameState.hpp"
 #include "Packet.hpp"
 #include "PacketType.hpp"
 #include "Server.hpp"

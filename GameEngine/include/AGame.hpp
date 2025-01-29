@@ -22,13 +22,6 @@
 #include "Collidable.hpp"
 #include "Projectile.hpp"
 #include "PlayerAction.hpp"
-#include "Position.hpp"
-#include "Drawable.hpp"
-#include "Collidable.hpp"
-#include "Controllable.hpp"
-#include "Projectile.hpp"
-#include "Velocity.hpp"
-#include "Registry.hpp"
 #include <vector>
 #include <mutex>
 
@@ -58,8 +51,7 @@ class AGame : public IGame {
         const std::vector<PlayerAction>& getPlayerActions() const override;
 
         //Getter functions for player, bullet and enemy positions for server to build package to send to client
-        std::pair<float, float> getPlayerPosition(int playerId) const override;
-        std::pair<float, float> getBulletPosition(int bulletId) const override;
+        std::pair<float, float> getPlayerPosition(int playerId) const override;        std::pair<float, float> getBulletPosition(int bulletId) const override;
         std::pair<float, float> getEnemyPosition(int enemyId) const override;
         std::pair<float, float> getBossPosition(int enemyId) const override;
 

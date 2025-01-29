@@ -11,7 +11,7 @@ public:
     void initializeplayers(int numPlayers);
     void update() override;
     void handlePlayerMove(int playerId, int actionId) override;
-    void run(int numPlayers);
+    void run(int numPlayers) override;
 
     bool isBossSpawned() const;
     bool areEnemiesCleared() const;
