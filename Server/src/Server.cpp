@@ -41,7 +41,7 @@ void Server::send_to_client(const std::string& message, const udp::endpoint& cli
         boost::asio::buffer(message), client_endpoint,
         [](const boost::system::error_code& error, std::size_t bytes_transferred) {
             if (!error) {
-                std::cout << "[DEBUG] Message sent to client." << std::endl;
+                // std::cout << "[DEBUG] Message sent to client." << std::endl;
             } else {
                 std::cerr << "[ERROR] Error sending to client: " << error.message() << std::endl;
             }
@@ -87,7 +87,7 @@ void Server::handle_receive(const boost::system::error_code &error, std::size_t 
 {
     if (!error || error == boost::asio::error::message_size) {
         std::string received_data(recv_buffer_.data(), bytes_transferred);
-        std::cout << "[DEBUG] Received: " << static_cast<int>(received_data[0]) << std::endl;
+        // std::cout << "[DEBUG] Received: " << static_cast<int>(received_data[0]) << std::endl;
 
         Network::Packet packet;
         packet.type = deserializePacket(received_data).type;
@@ -167,7 +167,7 @@ Network::DisconnectData Server::disconnectData(boost::asio::ip::udp::endpoint& c
         for (auto it = clients_.begin(); it != clients_.end(); ++it) {
             if (it->second.getEndpoint() == client_endpoint) {
                 data.id = it->second.getId();
-                std::cout << "[DEBUG] Client " << data.id << " disconnected." << std::endl;
+                // std::cout << "[DEBUG] Client " << data.id << " disconnected." << std::endl;
 
                 available_ids_.push(data.id);
 
@@ -210,7 +210,7 @@ void Server::handle_send_timer(const boost::system::error_code& error) {
         // Restart the timer
         start_send_timer();
     } else {
-        std::cerr << "[DEBUG] Timer error: " << error.message() << std::endl;
+        std::cerr << "[ERROR] Timer error: " << error.message() << std::endl;
     }
 }
 
