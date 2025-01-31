@@ -45,5 +45,8 @@ namespace Network {
         CHANGE = 29,
         GAME_STARTED = 30,
         GAME_NOT_STARTED = 31,
+        UI_UPDATE = 32,
+        HEARTBEAT = 33,
+        GAME_START_2 = 34,
     };
 }

@@ -1,13 +1,8 @@
-/*
-** EPITECH PROJECT, 2024
-** R-Type [WSL: Ubuntu]
-** File description:
-** Client
-*/
-
-#pragma once
+#ifndef CLIENT_HPP
+#define CLIENT_HPP
 
 #include "Packet.hpp"
+#include "Scene.hpp"
 
 #include <boost/asio.hpp>
 #include <boost/bind/bind.hpp>
@@ -24,56 +19,51 @@
 #include <unordered_map>
 #include <boost/asio/steady_timer.hpp>
 #include <queue>
+#include <chrono>
+
 
 #define MAX_LENGTH 1024
-#define BASE_AUDIO 50
+#define BASE_AUDIO 0
 
-namespace RType {
-    enum class SpriteType {
-        Enemy,
-        Boss,
-        Player,
-        Bullet,
-        Background,
-        Start_button
-    };
+// Sprite Types
+class SpriteElement {
+public:
+    sf::Sprite sprite;
+    int id;
+};
 
-    class SpriteElement {
-    public:
-        sf::Sprite sprite;
-        int id;
-    };
-
-    class Client {
+class Client {
     public:
         Client(boost::asio::io_context& io_context, const std::string& host, short server_port, short client_port);
         ~Client();
+        int clientLoop();
+        // Network Communication
         void send(const std::string& message);
         void start_receive();
-        int main_loop();
+        void sendExitPacket();
+        void start_send_timer();
+        void handle_send_timer(const boost::system::error_code& error);
+        void regulate_receive();
+        // Packet Handling
         std::string createPacket(Network::PacketType type);
-        void adjustVolume(float change);
-        void handleKeyPress(sf::Keyboard::Key key, sf::RenderWindow& window);
-        void sendExitPacket() { send(createPacket(Network::PacketType::DISCONNECTED)); }
+        std::string createMousePacket(Network::PacketType type, int x = 0, int y = 0);
+        void parseMessage(std::string packet_data);
+        void handleHeartbeatMessage(const std::string& data);
+        void setReceiveCallback(std::function<void(const std::string&)> callback);
+        //Getters
+        int getNumClients();
+        int getPing();
+        void sendHeartbeatMessage();
+
 
     private:
         void handle_receive(const boost::system::error_code& error, std::size_t bytes_transferred);
         void handle_send(const boost::system::error_code& error, std::size_t bytes_transferred);
         void run_receive();
-        void createSprite();
-        void loadTextures();
-        void drawSprites(sf::RenderWindow& window);
-        void updateSpritePosition();
-        void parseMessage(std::string packet_data);
-        void destroySprite();
-        void processEvents(sf::RenderWindow& window);
-        void initLobbySprites(sf::RenderWindow& window);
-        void resetValues();
-        void LoadSound();
-        std::string createMousePacket(Network::PacketType type, int x = 0, int y = 0);
-        void start_send_timer();
-        void handle_send_timer(const boost::system::error_code& error);
 
+        void switchScene(SceneType scene);
+
+        // variables
         sf::RenderWindow window;
         boost::asio::ip::udp::socket socket_;
         boost::asio::ip::udp::endpoint server_endpoint_;
@@ -82,16 +72,26 @@ namespace RType {
         std::mutex mutex_;
         std::thread receive_thread_;
         boost::asio::io_context& io_context_;
-        std::vector<SpriteElement> sprites_;
-        std::unordered_map<SpriteType, sf::Texture> textures_;
         int action;
         int server_id;
         float new_x = 0.0, new_y = 0.0;
-        sf::SoundBuffer buffer_background_;
-        sf::Sound sound_background_;
-        sf::SoundBuffer buffer_shoot_;
-        sf::Sound sound_shoot_;
-        boost::asio::steady_timer send_timer_;
         std::queue<std::string> send_queue_;
-    };
-}
+        boost::asio::steady_timer send_timer_;
+        boost::asio::steady_timer receive_timer_;
+        std::function<void(const std::string&)> receive_callback_;
+
+        int numClients_;
+        double ping_ = 0.0;
+        int packetSent = 0;
+        int packetReceived = 0;
+        int packetLost = 0; 
+        std::chrono::high_resolution_clock::time_point heartBeatStart_;
+        std::chrono::time_point<std::chrono::high_resolution_clock> lastHeartbeatTime_;
+
+        Scene* currentScene = nullptr;
+
+        void start_heartbeat_timer();
+        void handle_heartbeat_timer(const boost::system::error_code& error);
+};
+
+#endif //CLIENT_HPP

@@ -18,24 +18,24 @@ using boost::asio::ip::udp;
  * @param io_context The io_context object used for asynchronous operations.
  * @param port The port number on which the server will listen for incoming UDP packets.
  */
-RType::Server::Server(boost::asio::io_context& io_context, short port, ThreadSafeQueue<Network::Packet>& packetQueue, GameState* game)
-: socket_(io_context, udp::endpoint(udp::v4(), port)), m_packetQueue(packetQueue), m_game(game), _nbClients(0), m_running(false), send_timer_(io_context) // Initialize send_timer_
+Server::Server(boost::asio::io_context& io_context, short port, ThreadSafeQueue<Network::Packet>& packetQueue)
+: socket_(io_context, udp::endpoint(udp::v4(), port)), m_packetQueue(packetQueue), _nbClients(0), m_running(false), send_timer_(io_context), receive_timer_(io_context) // Initialize timers
 {
-    start_receive();
-    start_send_timer(); // Start the send timer
+    regulate_receive();
+    start_send_timer();
 }
 
-RType::Server::~Server()
+Server::~Server()
 {
     socket_.close();
 }
 
-void RType::Server::setGameState(GameState* game) {
-    m_game = game;
-}
+// void Server::setGameState(GameState* game) {
+//     m_game = game;
+// }
 //SEND MESSAGES
 
-void RType::Server::send_to_client(const std::string& message, const udp::endpoint& client_endpoint)
+void Server::send_to_client(const std::string& message, const udp::endpoint& client_endpoint)
 {
     socket_.async_send_to(
         boost::asio::buffer(message), client_endpoint,
@@ -48,7 +48,7 @@ void RType::Server::send_to_client(const std::string& message, const udp::endpoi
         });
 }
 
-void RType::Server::Broadcast(const std::string& message)
+void Server::Broadcast(const std::string& message)
 {
     {
         std::lock_guard<std::mutex> lock(clients_mutex_);
@@ -63,11 +63,11 @@ void RType::Server::Broadcast(const std::string& message)
  * from a remote endpoint. When data is received, the provided handler function
  * is called to process the received data.
  */
-void RType::Server::start_receive()
+void Server::start_receive()
 {
     socket_.async_receive_from(
         boost::asio::buffer(recv_buffer_), remote_endpoint_,
-        boost::bind(&RType::Server::handle_receive, this,
+        boost::bind(&Server::handle_receive, this,
                     boost::asio::placeholders::error,
                     boost::asio::placeholders::bytes_transferred));
 }
@@ -83,7 +83,7 @@ void RType::Server::start_receive()
  * @param bytes_transferred The number of bytes received.
  */
 
-void RType::Server::handle_receive(const boost::system::error_code &error, std::size_t bytes_transferred)
+void Server::handle_receive(const boost::system::error_code &error, std::size_t bytes_transferred)
 {
     if (!error || error == boost::asio::error::message_size) {
         std::string received_data(recv_buffer_.data(), bytes_transferred);
@@ -92,22 +92,20 @@ void RType::Server::handle_receive(const boost::system::error_code &error, std::
         Network::Packet packet;
         packet.type = deserializePacket(received_data).type;
         m_packetQueue.push(packet);
-        start_receive();
-    }
-    else {
+    } else {
         std::cerr << "[ERROR] Error receiving: " << error.message() << std::endl;
-        start_receive();
     }
+    regulate_receive(); // Regulate the frequency of receive operations
 }
 
-Network::Packet RType::Server::deserializePacket(const std::string& packet_str)
+Network::Packet Server::deserializePacket(const std::string& packet_str)
 {
     Network::Packet packet;
     packet.type = static_cast<Network::PacketType>(packet_str[0]);
     return packet;
 }
 
-std::string RType::Server::createPacket(const Network::PacketType& type, const std::string& data)
+std::string Server::createPacket(const Network::PacketType& type, const std::string& data)
 {
     std::string packet_str;
     std::string packet_data = data.empty() ? "-1;-1;-1" : data;
@@ -123,7 +121,7 @@ std::string RType::Server::createPacket(const Network::PacketType& type, const s
 
 //COMMANDS
 
-uint32_t RType::Server::createClient(boost::asio::ip::udp::endpoint& client_endpoint)
+uint32_t Server::createClient(boost::asio::ip::udp::endpoint& client_endpoint)
 {
     uint32_t nb;
     {
@@ -144,7 +142,7 @@ uint32_t RType::Server::createClient(boost::asio::ip::udp::endpoint& client_endp
     return nb;
 }
 
-Network::ReqConnect RType::Server::reqConnectData(boost::asio::ip::udp::endpoint& client_endpoint)
+Network::ReqConnect Server::reqConnectData(boost::asio::ip::udp::endpoint& client_endpoint)
 {
     Network::ReqConnect data;
     size_t idClient;
@@ -160,7 +158,7 @@ Network::ReqConnect RType::Server::reqConnectData(boost::asio::ip::udp::endpoint
     }
 }
 
-Network::DisconnectData RType::Server::disconnectData(boost::asio::ip::udp::endpoint& client_endpoint)
+Network::DisconnectData Server::disconnectData(boost::asio::ip::udp::endpoint& client_endpoint)
 {
     Network::DisconnectData data;
     {
@@ -184,7 +182,7 @@ Network::DisconnectData RType::Server::disconnectData(boost::asio::ip::udp::endp
     return data;
 }
 
-bool RType::Server::hasPositionChanged(int id, float x, float y, std::unordered_map<int, std::pair<float, float>>& lastKnownPositions) {
+bool Server::hasPositionChanged(int id, float x, float y, std::unordered_map<int, std::pair<float, float>>& lastKnownPositions) {
     auto it = lastKnownPositions.find(id);
     if (it == lastKnownPositions.end() || it->second != std::make_pair(x, y)) {
         lastKnownPositions[id] = {x, y};
@@ -193,83 +191,13 @@ bool RType::Server::hasPositionChanged(int id, float x, float y, std::unordered_
     return false;
 }
 
-void RType::Server::playerPacketFactory() {
-    static std::unordered_map<int, std::pair<float, float>> lastKnownPositions;
 
-    for (int playerId = 0; playerId < m_game->getPlayerCount(); ++playerId) {
-        try {
-            auto [x, y] = m_game->getPlayerPosition(playerId);
-            if (hasPositionChanged(playerId, x, y, lastKnownPositions)) {
-                std::string data = std::to_string(playerId) + ";" + std::to_string(x) + ";" + std::to_string(y);
-                Broadcast(createPacket(Network::PacketType::CHANGE, data));
-            }
-        } catch (const std::out_of_range& e) {
-            std::cerr << "[ERROR] Invalid player ID: " << playerId << " - " << e.what() << std::endl;
-        }
-    }
-}
-
-void RType::Server::enemyPacketFactory() {
-    static std::unordered_map<int, std::pair<float, float>> lastKnownPositions;
-
-    for (int enemyId = 0; enemyId < m_game->getEnemiesCount(); ++enemyId) {
-        try {
-            auto [x, y] = m_game->getEnemyPosition(enemyId);
-            if (hasPositionChanged(enemyId, x, y, lastKnownPositions)) {
-                std::string data = std::to_string(enemyId + 500) + ";" + std::to_string(x) + ";" + std::to_string(y);
-                Broadcast(createPacket(Network::PacketType::CHANGE, data));
-            }
-        } catch (const std::out_of_range& e) {
-            std::cerr << "[ERROR] Invalid enemy ID: " << enemyId << " - " << e.what() << std::endl;
-        }
-    }
-}
-
-void RType::Server::bulletPacketFactory() {
-    static std::unordered_map<int, std::pair<float, float>> lastKnownPositions;
-
-    for (int bulletId = 0; bulletId < m_game->getBulletsCount(); ++bulletId) {
-        try {
-            auto [x, y] = m_game->getBulletPosition(bulletId);
-            if (hasPositionChanged(bulletId, x, y, lastKnownPositions)) {
-                std::string data = std::to_string(bulletId + 200) + ";" + std::to_string(x) + ";" + std::to_string(y);
-                Broadcast(createPacket(Network::PacketType::CHANGE, data));
-            }
-        } catch (const std::out_of_range& e) {
-            std::cerr << "[ERROR] Invalid bullet ID: " << bulletId << " - " << e.what() << std::endl;
-        }
-    }
-}
-
-void RType::Server::bossPacketFactory() {
-    static std::unordered_map<int, std::pair<float, float>> lastKnownPositions;
-
-    for (int bossId = 0; bossId < m_game->getBossCount(); ++bossId) {
-        try {
-            auto [x, y] = m_game->getBossPosition(bossId);
-            if (hasPositionChanged(bossId, x, y, lastKnownPositions)) {
-                std::string data = std::to_string(bossId + 900) + ";" + std::to_string(x) + ";" + std::to_string(y);
-                Broadcast(createPacket(Network::PacketType::CHANGE, data));
-            }
-        } catch (const std::out_of_range& e) {
-            std::cerr << "[ERROR] Invalid boss ID: " << bossId << " - " << e.what() << std::endl;
-        }
-    }
-}
-
-void RType::Server::PacketFactory() {
-    playerPacketFactory();
-    enemyPacketFactory();
-    bulletPacketFactory();
-    bossPacketFactory();
-}
-
-void RType::Server::start_send_timer() {
+void Server::start_send_timer() {
     send_timer_.expires_after(std::chrono::milliseconds(1));
     send_timer_.async_wait(boost::bind(&Server::handle_send_timer, this, boost::asio::placeholders::error));
 }
 
-void RType::Server::handle_send_timer(const boost::system::error_code& error) {
+void Server::handle_send_timer(const boost::system::error_code& error) {
     if (!error) {
         std::lock_guard<std::mutex> lock(clients_mutex_);
         if (!send_queue_.empty()) {
@@ -285,3 +213,19 @@ void RType::Server::handle_send_timer(const boost::system::error_code& error) {
         std::cerr << "[DEBUG] Timer error: " << error.message() << std::endl;
     }
 }
+
+void Server::sendHeartbeatMessage() {
+    std::ostringstream message;
+    message << static_cast<uint8_t>(Network::PacketType::HEARTBEAT) << ";";
+    message << clients_.size() << ";"; // Number of clients
+    for (const auto& client : clients_) {
+        send_to_client(message.str(), client.second.getEndpoint());
+    }
+}
+
+void Server::regulate_receive()
+{
+    receive_timer_.expires_after(std::chrono::milliseconds(10)); // Set the interval to 10 milliseconds
+    receive_timer_.async_wait(boost::bind(&Server::start_receive, this));
+}
+

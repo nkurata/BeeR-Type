@@ -6,6 +6,7 @@
 */
 
 #include "PacketHandler.hpp"
+#include "Server.hpp"
 #include <iostream>
 #include <boost/algorithm/string.hpp>
 #include <functional>
@@ -13,7 +14,7 @@
 using namespace Network;
 
 // Constructor
-PacketHandler::PacketHandler(ThreadSafeQueue<Network::Packet>& queue, GameState& game, RType::Server& server) : m_queue(queue), m_game(game), m_server(server)
+PacketHandler::PacketHandler(ThreadSafeQueue<Network::Packet>& queue, Server& server) : m_queue(queue), m_server(server)
 {
     initializeHandlers();
 }
@@ -62,6 +63,8 @@ void PacketHandler::initializeHandlers() {
     m_handlers[Network::PacketType::PLAYER_UP] = std::bind(&PacketHandler::handlePlayerUp, this, std::placeholders::_1);
     m_handlers[Network::PacketType::PLAYER_DOWN] = std::bind(&PacketHandler::handlePlayerDown, this, std::placeholders::_1);
     m_handlers[Network::PacketType::OPEN_MENU] = std::bind(&PacketHandler::handleOpenMenu, this, std::placeholders::_1);
+    m_handlers[Network::PacketType::HEARTBEAT] = std::bind(&PacketHandler::handleHeartbeat, this, std::placeholders::_1);
+    m_handlers[Network::PacketType::GAME_START_2] = std::bind(&PacketHandler::handlePOCStart, this, std::placeholders::_1);
 }
 
 void PacketHandler::handlePacket(const Network::Packet &packet) {
@@ -107,7 +110,24 @@ void PacketHandler::handleGameStart(const Network::Packet &packet)
         m_server.Broadcast(m_server.createPacket(Network::PacketType::GAME_START, ""));
     }
     std::thread gameThread([this, numPlayers] {
-        m_game.run(numPlayers);
+        // m_game.run(numPlayers);
+    });
+    gameThread.detach();
+}
+
+void PacketHandler::handlePOCStart(const Network::Packet &packet)
+{
+    int numPlayers;
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        std::cout << "[PacketHandler] Handled GAME_START_2 packet." << std::endl;
+        m_server.m_running = true;
+        const auto& clients = m_server.getClients();
+        numPlayers = clients.size();
+        m_server.Broadcast(m_server.createPacket(Network::PacketType::GAME_START_2, ""));
+    }
+    std::thread gameThread([this, numPlayers] {
+        // m_game.run(numPlayers);
     });
     gameThread.detach();
 }
@@ -127,7 +147,7 @@ void PacketHandler::handlePlayerJoin(const Network::Packet &packet)
 void PacketHandler::handlePlayerShoot(const Network::Packet &packet)
 {
     // std::lock_guard<std::mutex> lock(m_mutex);
-    std::cout << "[PacketHandler] Handeled PLAYER_SHOOT packet." << std::endl;
+    std::cout << "[PacketHandler] Handled PLAYER_SHOOT packet." << std::endl;
     const auto& clients = m_server.getClients();
     const udp::endpoint& clientEndpoint = m_server.getRemoteEndpoint();
 
@@ -144,7 +164,7 @@ void PacketHandler::handlePlayerShoot(const Network::Packet &packet)
             }
         }
     } if (found) {
-        m_game.spawnBullet(playerId);
+        // m_game.spawnBullet(playerId);
     } else {
         std::cerr << "[PacketHandler] Client endpoint not found in client list." << std::endl;
     }
@@ -233,6 +253,11 @@ void PacketHandler::handleOpenMenu(const Network::Packet &packet)
     std::cout << "[PacketHandler] Handeled OPEN_MENU packet." << std::endl;
 }
 
+void PacketHandler::handleHeartbeat(const Network::Packet &packet) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_server.sendHeartbeatMessage();
+}
+
 void PacketHandler::handlePlayerAction(const Network::Packet &packet, int action)
 {
     {
@@ -260,7 +285,7 @@ void PacketHandler::handlePlayerAction(const Network::Packet &packet, int action
         }
     }
     if (found) {
-        m_game.addPlayerAction(playerId, action);
+        // m_game.addPlayerAction(playerId, action);
     } else {
         std::cerr << "[PacketHandler] Client endpoint not found in client list." << std::endl;
     }
