@@ -64,6 +64,7 @@ void PacketHandler::initializeHandlers() {
     m_handlers[Network::PacketType::PLAYER_DOWN] = std::bind(&PacketHandler::handlePlayerDown, this, std::placeholders::_1);
     m_handlers[Network::PacketType::OPEN_MENU] = std::bind(&PacketHandler::handleOpenMenu, this, std::placeholders::_1);
     m_handlers[Network::PacketType::HEARTBEAT] = std::bind(&PacketHandler::handleHeartbeat, this, std::placeholders::_1);
+    m_handlers[Network::PacketType::GAME_START_2] = std::bind(&PacketHandler::handlePOCStart, this, std::placeholders::_1);
 }
 
 void PacketHandler::handlePacket(const Network::Packet &packet) {
@@ -107,6 +108,23 @@ void PacketHandler::handleGameStart(const Network::Packet &packet)
         const auto& clients = m_server.getClients();
         numPlayers = clients.size();
         m_server.Broadcast(m_server.createPacket(Network::PacketType::GAME_START, ""));
+    }
+    std::thread gameThread([this, numPlayers] {
+        // m_game.run(numPlayers);
+    });
+    gameThread.detach();
+}
+
+void PacketHandler::handlePOCStart(const Network::Packet &packet)
+{
+    int numPlayers;
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        std::cout << "[PacketHandler] Handled GAME_START_2 packet." << std::endl;
+        m_server.m_running = true;
+        const auto& clients = m_server.getClients();
+        numPlayers = clients.size();
+        m_server.Broadcast(m_server.createPacket(Network::PacketType::GAME_START_2, ""));
     }
     std::thread gameThread([this, numPlayers] {
         // m_game.run(numPlayers);
@@ -237,8 +255,7 @@ void PacketHandler::handleOpenMenu(const Network::Packet &packet)
 
 void PacketHandler::handleHeartbeat(const Network::Packet &packet) {
     std::lock_guard<std::mutex> lock(m_mutex);
-    std::cout << "[PacketHandler] Handled HEARTBEAT packet." << std::endl;
-    // Handle the heartbeat packet if needed
+    m_server.sendHeartbeatMessage();
 }
 
 void PacketHandler::handlePlayerAction(const Network::Packet &packet, int action)

@@ -47,5 +47,6 @@ namespace Network {
         GAME_NOT_STARTED = 31,
         UI_UPDATE = 32,
         HEARTBEAT = 33,
+        GAME_START_2 = 34,
     };
 }

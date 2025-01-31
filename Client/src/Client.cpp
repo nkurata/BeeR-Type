@@ -6,7 +6,7 @@
 using boost::asio::ip::udp;
 
 Client::Client(boost::asio::io_context &io_context, const std::string &host, short server_port, short client_port)
-    : socket_(io_context, udp::endpoint(udp::v4(), client_port)), io_context_(io_context), window(sf::VideoMode(1280, 720), "R-Type Client"), send_timer_(io_context), receive_timer_(io_context) // Initialize timers
+    : socket_(io_context, udp::endpoint(udp::v4(), client_port)), io_context_(io_context), window(sf::VideoMode(1280, 720), "R-Type Client"), send_timer_(io_context), receive_timer_(io_context), currentScene(nullptr), lastHeartbeatTime_(std::chrono::high_resolution_clock::now())
 {
     std::cout << "[DEBUG] Client constructor called" << std::endl;
     udp::resolver resolver(io_context);
@@ -35,8 +35,10 @@ Client::~Client()
 }
 
 void Client::switchScene(SceneType type) {
-    delete currentScene;
-    currentScene = nullptr;
+    if (currentScene) {
+        delete currentScene;
+        currentScene = nullptr;
+    }
     switch (type) {
         case SceneType::Lobby:
             std::cout << "[DEBUG] Switching to Lobby scene" << std::endl;
@@ -47,9 +49,18 @@ void Client::switchScene(SceneType type) {
             // currentScene = std::make_unique<GameScene>(window, *this);
             break;
         default:
-            // currentScene = std::make_unique<LobbyScene>(window, *this);
+            std::cerr << "[ERROR] Unknown scene type" << std::endl;
             break;
     }
+}
+
+// Getters
+int Client::getPing() {
+    return ping_;
+}
+
+int Client::getNumClients() {
+    return numClients_;
 }
 
 // Network Communication
@@ -92,7 +103,6 @@ void Client::handle_send_timer(const boost::system::error_code& error) {
     } else {
         std::cerr << "[DEBUG] Timer error: " << error.message() << std::endl;
     }
-
 }
 
 void Client::regulate_receive()
@@ -106,7 +116,7 @@ void Client::handle_receive(const boost::system::error_code& error, std::size_t 
 {
     std::lock_guard<std::mutex> lock(mutex_);
     if (!error || error == boost::asio::error::message_size) {
-        std::cout << "[DEBUG] Received " << bytes_transferred << " bytes" << std::endl;
+        packetReceived++;
         received_data.assign(recv_buffer_.data(), bytes_transferred);
         parseMessage(received_data);
     } else {
@@ -119,8 +129,9 @@ void Client::handle_send(const boost::system::error_code& error, std::size_t byt
 {
     std::lock_guard<std::mutex> lock(mutex_);
     if (!error) {
-        std::cout << "[DEBUG] Sent " << bytes_transferred << " bytes" << std::endl;
+        packetSent++;
     } else {
+        packetLost++;
         std::cerr << "[DEBUG] Error sending: " << error.message() << std::endl;
     }
 }
@@ -197,6 +208,19 @@ void Client::parseMessage(std::string packet_data)
     }
 }
 
+void Client::sendHeartbeatMessage()
+{
+    auto now = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double, std::milli> elapsed = now - lastHeartbeatTime_;
+    
+    if (elapsed.count() > 100) {
+        auto start = std::chrono::high_resolution_clock::now();
+        send_queue_.push(createPacket(Network::PacketType::HEARTBEAT));
+        heartBeatStart_ = start;
+        lastHeartbeatTime_ = now;
+    }
+}
+
 void Client::handleHeartbeatMessage(const std::string& data) {
     std::vector<std::string> elements;
     std::stringstream ss(data);
@@ -205,13 +229,24 @@ void Client::handleHeartbeatMessage(const std::string& data) {
         elements.push_back(segment);
     }
 
-    if (elements.size() >= 2) {
-        int numClients = std::stoi(elements[0]);
-        int ping = std::stoi(elements[1]);
-        currentScene->updatePing(ping);
-        currentScene->setNumClients(numClients);
-        currentScene->addChatLog("Player joined. Total players: " + std::to_string(numClients));
+    if (elements.size() > 0) {
+        int newNumClients = std::stoi(elements[0]);
+        if (newNumClients > numClients_) {
+            currentScene->addChatLog("Player connected. Total players: " + std::to_string(newNumClients));
+        } else if (newNumClients < numClients_) {
+            currentScene->addChatLog("Player disconnected. Total players: " + std::to_string(newNumClients));
+        }
+        numClients_ = newNumClients;
     }
+
+    // Calculate the ping as the round-trip time
+    auto now = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double, std::milli> elapsed = now - heartBeatStart_;
+    ping_ = elapsed.count();
+
+    // Print the content of the heartbeat message
+    std::cout << "[DEBUG] Heartbeat message content: " << data << std::endl;
+    std::cout << "[DEBUG] Calculated ping: " << ping_ << " ms" << std::endl;
 }
 
 int Client::clientLoop()
@@ -220,10 +255,10 @@ int Client::clientLoop()
     send(createPacket(Network::PacketType::REQCONNECT));
 
     while (this->window.isOpen()) {
+        sendHeartbeatMessage();
         currentScene->processEvents();
         currentScene->update();
         currentScene->render();
-        currentScene->renderOverlay(); // Render the ping and chat log overlay
 
         mutex_.unlock();
     }

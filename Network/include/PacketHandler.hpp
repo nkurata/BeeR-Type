@@ -52,6 +52,8 @@ namespace Network {
         void handlePlayerDown(const Network::Packet &packet);
         void handleOpenMenu(const Network::Packet &packet);
         void handlePlayerAction(const Network::Packet &packet, int action);
+        void handleHeartbeat(const Network::Packet &packet);
+        void handlePOCStart(const Network::Packet &packet);
 
     private:
         ThreadSafeQueue<Network::Packet> &m_queue;
@@ -61,6 +63,5 @@ namespace Network {
         std::mutex m_mutex;
 
         std::unordered_map<Network::PacketType, std::function<void(const Network::Packet&)>> m_handlers;
-        void handleHeartbeat(const Network::Packet &packet);
     };
 }

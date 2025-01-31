@@ -22,10 +22,9 @@ public:
     virtual void update() = 0;
     virtual void render() = 0;
 
-    void updatePing(int ping);
+    void updatePing();
     void addChatLog(const std::string& message);
     void renderOverlay();
-    void setNumClients(int numClients);
 
 protected:
     sf::RenderWindow& window;

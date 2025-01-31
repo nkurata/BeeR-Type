@@ -19,23 +19,13 @@
 #include <unordered_map>
 #include <boost/asio/steady_timer.hpp>
 #include <queue>
+#include <chrono>
 
 
 #define MAX_LENGTH 1024
 #define BASE_AUDIO 0
 
 // Sprite Types
-enum class SpriteType {
-    Enemy,
-    Boss,
-    Player,
-    Bullet,
-    Background,
-    LobbyBackground,
-    StartButton,
-    PlayerIcon
-};
-
 class SpriteElement {
 public:
     sf::Sprite sprite;
@@ -60,8 +50,11 @@ class Client {
         void parseMessage(std::string packet_data);
         void handleHeartbeatMessage(const std::string& data);
         void setReceiveCallback(std::function<void(const std::string&)> callback);
+        //Getters
+        int getNumClients();
+        int getPing();
+        void sendHeartbeatMessage();
 
-        void getNumClients();
 
     private:
         void handle_receive(const boost::system::error_code& error, std::size_t bytes_transferred);
@@ -87,7 +80,18 @@ class Client {
         boost::asio::steady_timer receive_timer_;
         std::function<void(const std::string&)> receive_callback_;
 
-        Scene* currentScene;
+        int numClients_;
+        double ping_ = 0.0;
+        int packetSent = 0;
+        int packetReceived = 0;
+        int packetLost = 0; 
+        std::chrono::high_resolution_clock::time_point heartBeatStart_;
+        std::chrono::time_point<std::chrono::high_resolution_clock> lastHeartbeatTime_;
+
+        Scene* currentScene = nullptr;
+
+        void start_heartbeat_timer();
+        void handle_heartbeat_timer(const boost::system::error_code& error);
 };
 
 #endif //CLIENT_HPP

@@ -46,6 +46,7 @@ class Server {
         const udp::endpoint& getRemoteEndpoint() const {
             return remote_endpoint_;
             }
+        void sendHeartbeatMessage();
         ClientList clients_;
         uint32_t _nbClients;
         std::mutex clients_mutex_;
@@ -58,9 +59,7 @@ class Server {
         uint32_t createClient(boost::asio::ip::udp::endpoint& client_endpoint);
         void start_send_timer();
         void handle_send_timer(const boost::system::error_code& error);
-        void start_heartbeat_timer();
-        void handle_heartbeat_timer(const boost::system::error_code& error);
-        void regulate_receive(); // Add this line
+        void regulate_receive();
 
         udp::socket socket_;
         udp::endpoint remote_endpoint_;
@@ -70,13 +69,12 @@ class Server {
         std::unordered_map<Network::PacketType, void(*)(const Network::Packet&)> m_handlers;        
         std::queue<std::string> send_queue_;
         boost::asio::steady_timer send_timer_;
-        boost::asio::steady_timer heartbeat_timer_;
-        boost::asio::steady_timer receive_timer_; // Add this line
+        boost::asio::steady_timer receive_timer_;
         std::queue<uint32_t> available_ids_;
 
         // void *RtypeGame;
         // RType::GameState* (*createRtypeGame)(RType::Server* server);
-        std::string createHeartbeatMessage(int ping);
+
 };
 
 

@@ -19,16 +19,14 @@ using boost::asio::ip::udp;
  * @param port The port number on which the server will listen for incoming UDP packets.
  */
 Server::Server(boost::asio::io_context& io_context, short port, ThreadSafeQueue<Network::Packet>& packetQueue)
-: socket_(io_context, udp::endpoint(udp::v4(), port)), m_packetQueue(packetQueue), _nbClients(0), m_running(false), send_timer_(io_context), heartbeat_timer_(io_context), receive_timer_(io_context) // Initialize timers
+: socket_(io_context, udp::endpoint(udp::v4(), port)), m_packetQueue(packetQueue), _nbClients(0), m_running(false), send_timer_(io_context), receive_timer_(io_context) // Initialize timers
 {
     regulate_receive();
-    start_send_timer(); // Start the send timer
-    start_heartbeat_timer(); // Start the heartbeat timer
+    start_send_timer();
 }
 
 Server::~Server()
 {
-    heartbeat_timer_.cancel();
     socket_.close();
 }
 
@@ -216,29 +214,12 @@ void Server::handle_send_timer(const boost::system::error_code& error) {
     }
 }
 
-void Server::start_heartbeat_timer() {
-    heartbeat_timer_.expires_after(std::chrono::seconds(1)); // Set heartbeat interval
-    heartbeat_timer_.async_wait(boost::bind(&Server::handle_heartbeat_timer, this, boost::asio::placeholders::error));
-}
-
-std::string Server::createHeartbeatMessage(int ping) {
+void Server::sendHeartbeatMessage() {
     std::ostringstream message;
     message << static_cast<uint8_t>(Network::PacketType::HEARTBEAT) << ";";
     message << clients_.size() << ";"; // Number of clients
-    message << ping; // Ping value
-    return message.str();
-}
-
-void Server::handle_heartbeat_timer(const boost::system::error_code& error) {
-    if (!error) {
-        std::lock_guard<std::mutex> lock(clients_mutex_);
-        for (const auto& client : clients_) {
-            int ping = 50; // Calculate the ping for the client
-            send_to_client(createHeartbeatMessage(ping), client.second.getEndpoint());
-        }
-        start_heartbeat_timer(); // Restart the timer
-    } else {
-        std::cerr << "[DEBUG] Heartbeat timer error: " << error.message() << std::endl;
+    for (const auto& client : clients_) {
+        send_to_client(message.str(), client.second.getEndpoint());
     }
 }
 

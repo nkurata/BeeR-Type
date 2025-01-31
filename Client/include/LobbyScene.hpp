@@ -2,8 +2,15 @@
 #define LOBBY_SCENE_HPP
 
 #include "Scene.hpp"
-#include "Client.hpp" // Include Client.hpp to use SpriteElement and SpriteType
+#include "Client.hpp"
 #include <unordered_map>
+
+enum SpriteType {
+    LobbyBackground,
+    StartButton,
+    StartButton2,
+    PlayerIcon
+};
 
 class LobbyScene : public Scene {
 public:
@@ -12,11 +19,12 @@ public:
     void update() override;
     void render() override;
 
-    void setNumClients(int numClients);
 
 private:
     void loadAssets();
     void initLobbySprites();
+    int numClients_;
+    int current_ping_ = 0;
 
     std::unordered_map<int, SpriteElement> scenes_;
     std::unordered_map<int, SpriteElement> buttons_;

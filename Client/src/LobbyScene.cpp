@@ -4,15 +4,15 @@
 LobbyScene::LobbyScene(sf::RenderWindow& window, Client& client)
     : Scene(window, client)
 {
-    loadAssets(); // Load textures when the scene is created
-    initLobbySprites(); // Initialize lobby sprites
+    loadAssets();
+    initLobbySprites();
 }
 
 void LobbyScene::loadAssets() {
-    if (!font_.loadFromFile("../assets/arial.ttf")) {
+    if (!font_.loadFromFile("../assets/font.otf")) {
         std::cerr << "[ERROR] Failed to load font" << std::endl;
     }
-    textures_[SpriteType::LobbyBackground].loadFromFile("../assets/lobby_background.jpg");
+    textures_[SpriteType::LobbyBackground].loadFromFile("../assets/lobby_background.png");
     textures_[SpriteType::StartButton].loadFromFile("../assets/play_button.png");
     textures_[SpriteType::PlayerIcon].loadFromFile("../assets/player_icon.png");
 }
@@ -30,20 +30,28 @@ void LobbyScene::initLobbySprites() {
     backgroundElement.sprite.setScale(scaleX, scaleY);
     backgroundElement.id = -100;
 
-    SpriteElement buttonElement;
-    buttonElement.sprite.setTexture(textures_[SpriteType::StartButton]);
-    buttonElement.sprite.setPosition(window.getSize().x - textures_[SpriteType::StartButton].getSize().x - 20, window.getSize().y - textures_[SpriteType::StartButton].getSize().y - 20);
-    buttonElement.id = -101;
-
     scenes_[-100] = backgroundElement;
-    buttons_[-101] = buttonElement;
 
-    // Add player sprites and texts on the left side of the screen
-    for (int i = 0; i < numClients_; ++i) {
+    // Position start buttons in the middle of the screen
+    SpriteElement buttonElement1;
+    buttonElement1.sprite.setTexture(textures_[SpriteType::StartButton]);
+    buttonElement1.sprite.setPosition((window.getSize().x / 2) - textures_[SpriteType::StartButton].getSize().x - 10, 20);
+    buttonElement1.id = -101;
+
+    SpriteElement buttonElement2;
+    buttonElement2.sprite.setTexture(textures_[SpriteType::StartButton]);
+    buttonElement2.sprite.setPosition((window.getSize().x / 2) + 10, 20);
+    buttonElement2.id = -102;
+
+    buttons_[-101] = buttonElement1;
+    buttons_[-102] = buttonElement2;
+
+    // Add player sprites and texts at the bottom of the screen
+    for (int i = 0; i < client.getNumClients(); ++i) {
         SpriteElement playerElement;
         playerElement.sprite.setTexture(textures_[SpriteType::PlayerIcon]);
         playerElement.sprite.setScale(0.40f, 0.40f);
-        playerElement.sprite.setPosition(50, 100 + i * 100);
+        playerElement.sprite.setPosition(50 + i * (playerElement.sprite.getGlobalBounds().width + 20), window.getSize().y - playerElement.sprite.getGlobalBounds().height - 50);
         playerElement.id = i;
         players_[i] = playerElement;
 
@@ -52,16 +60,11 @@ void LobbyScene::initLobbySprites() {
         playerText.setString("Player " + std::to_string(i + 1));
         playerText.setCharacterSize(24);
         playerText.setFillColor(sf::Color::White);
-        // Align text vertically with the middle of the icon
-        float textY = playerElement.sprite.getPosition().y + (playerElement.sprite.getGlobalBounds().height / 2) - (playerText.getGlobalBounds().height / 2);
-        playerText.setPosition(50 + playerElement.sprite.getGlobalBounds().width + 10, textY); 
+        // Align text horizontally with the middle of the icon
+        float textX = playerElement.sprite.getPosition().x + (playerElement.sprite.getGlobalBounds().width / 2) - (playerText.getGlobalBounds().width / 2);
+        playerText.setPosition(textX, playerElement.sprite.getPosition().y - playerText.getGlobalBounds().height - 10);
         player_texts_.push_back(playerText);
     }
-}
-
-void LobbyScene::setNumClients(int numClients) {
-    numClients_ = numClients;
-    initLobbySprites(); // Ensure this is called to update the sprites
 }
 
 void LobbyScene::processEvents() {
@@ -74,14 +77,18 @@ void LobbyScene::processEvents() {
             if (buttons_.find(-101) != buttons_.end() && buttons_[-101].sprite.getGlobalBounds().contains(mousePos.x, mousePos.y)) {
                 client.send(client.createPacket(Network::PacketType::GAME_START)); // Call createPacket correctly
                 buttons_.erase(-101);
+            } if (buttons_.find(-102) != buttons_.end() && buttons_[-102].sprite.getGlobalBounds().contains(mousePos.x, mousePos.y)) {
+                client.send(client.createPacket(Network::PacketType::GAME_START_2)); // Call createPacket correctly
+                buttons_.erase(-102);
             }
         }
-        // Handle other events...
     }
 }
 
 void LobbyScene::update() {
-    // Update lobby state...
+    numClients_ = client.getNumClients();
+    updatePing(); // Update the ping text
+    initLobbySprites();
 }
 
 void LobbyScene::render() {
@@ -99,5 +106,6 @@ void LobbyScene::render() {
     for (const auto& text : player_texts_) {
         window.draw(text);
     }
+    renderOverlay(); // Render the ping and chat log overlay
     window.display();
 }

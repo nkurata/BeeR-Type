@@ -19,9 +19,9 @@ Scene::Scene(sf::RenderWindow& window, Client& client)
     chat_text_.setPosition(10, 50);
 }
 
-void Scene::updatePing(int ping) {
-    current_ping_ = ping;
-    ping_text_.setString("Ping: " + std::to_string(ping) + " ms");
+void Scene::updatePing() {
+    current_ping_ = client.getPing();
+    ping_text_.setString("Ping: " + std::to_string(current_ping_) + " ms");
 }
 
 void Scene::addChatLog(const std::string& message) {
@@ -41,6 +41,3 @@ void Scene::renderOverlay() {
     window.draw(chat_text_);
 }
 
-void Scene::setNumClients(int numClients) {
-    numClients_ = numClients;
-}
