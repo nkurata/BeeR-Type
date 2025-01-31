@@ -19,7 +19,7 @@
 namespace Network {
     class PacketHandler {
     public:
-        PacketHandler(ThreadSafeQueue<Network::Packet>& queue, RType::Server& server);
+        PacketHandler(ThreadSafeQueue<Network::Packet>& queue, Server& server);
         ~PacketHandler();
 
         void start();
@@ -55,9 +55,8 @@ namespace Network {
 
     private:
         ThreadSafeQueue<Network::Packet> &m_queue;
-        // GameState& m_game;
+        Server& m_server;
         std::thread m_thread;
-        RType::Server& m_server;
         std::atomic<bool> m_running{false};
         std::mutex m_mutex;
 

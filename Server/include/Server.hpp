@@ -27,8 +27,7 @@ typedef std::map<uint32_t, ClientRegister> ClientList;
 
 using namespace boost::placeholders; // Used for Boost.Asio asynchronous operations to bind placeholders for callback functions
 
-namespace RType {
-    class Server {
+class Server {
     public:
         Server(boost::asio::io_context& io_context, short port, ThreadSafeQueue<Network::Packet>& packetQueue);
         ~Server();
@@ -78,6 +77,6 @@ namespace RType {
         // void *RtypeGame;
         // RType::GameState* (*createRtypeGame)(RType::Server* server);
         std::string createHeartbeatMessage(int ping);
-    };
-}
+};
+
 

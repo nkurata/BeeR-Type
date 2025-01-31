@@ -6,6 +6,7 @@
 */
 
 #include "PacketHandler.hpp"
+#include "Server.hpp"
 #include <iostream>
 #include <boost/algorithm/string.hpp>
 #include <functional>
@@ -13,7 +14,7 @@
 using namespace Network;
 
 // Constructor
-PacketHandler::PacketHandler(ThreadSafeQueue<Network::Packet>& queue, RType::Server& server) : m_queue(queue), m_server(server)
+PacketHandler::PacketHandler(ThreadSafeQueue<Network::Packet>& queue, Server& server) : m_queue(queue), m_server(server)
 {
     initializeHandlers();
 }
@@ -128,7 +129,7 @@ void PacketHandler::handlePlayerJoin(const Network::Packet &packet)
 void PacketHandler::handlePlayerShoot(const Network::Packet &packet)
 {
     // std::lock_guard<std::mutex> lock(m_mutex);
-    std::cout << "[PacketHandler] Handeled PLAYER_SHOOT packet." << std::endl;
+    std::cout << "[PacketHandler] Handled PLAYER_SHOOT packet." << std::endl;
     const auto& clients = m_server.getClients();
     const udp::endpoint& clientEndpoint = m_server.getRemoteEndpoint();
 

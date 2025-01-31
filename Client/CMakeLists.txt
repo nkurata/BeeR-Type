@@ -19,6 +19,8 @@ include_directories(
 # The Client library sources
 set(CLIENT_SOURCES
     src/Client.cpp
+    src/Scene.cpp
+    src/LobbyScene.cpp
 )
 
 add_library(ClientLib ${CLIENT_SOURCES})
