@@ -1,6 +1,7 @@
 #include "Client.hpp"
 #include "Scene.hpp"
 #include "LobbyScene.hpp"
+#include "GameScene.hpp"
 #include <iostream>
 
 using boost::asio::ip::udp;
@@ -8,7 +9,6 @@ using boost::asio::ip::udp;
 Client::Client(boost::asio::io_context &io_context, const std::string &host, short server_port, short client_port)
     : socket_(io_context, udp::endpoint(udp::v4(), client_port)), io_context_(io_context), window(sf::VideoMode(1280, 720), "R-Type Client"), send_timer_(io_context), receive_timer_(io_context), currentScene(nullptr), lastHeartbeatTime_(std::chrono::high_resolution_clock::now())
 {
-    // std::cout << "[DEBUG] Client constructor called" << std::endl;
     udp::resolver resolver(io_context);
     udp::resolver::query query(udp::v4(), host, std::to_string(server_port));
     server_endpoint_ = *resolver.resolve(query).begin();
@@ -17,41 +17,38 @@ Client::Client(boost::asio::io_context &io_context, const std::string &host, sho
     regulate_receive(); // Start the regulated receive
     start_send_timer(); // Start the send timer
     receive_thread_ = std::thread(&Client::run_receive, this);
-    // std::cout << "[DEBUG] Client constructor finished" << std::endl;
 
     switchScene(SceneType::Lobby); // Start with the Lobby scene
 }
 
 Client::~Client()
 {
-    // std::cout << "[DEBUG] Client destructor called" << std::endl;
     io_context_.stop();
     if (receive_thread_.joinable()) {
         receive_thread_.join();
     }
     socket_.close();
     delete currentScene;
-    // std::cout << "[DEBUG] Client destructor finished" << std::endl;
 }
 
 void Client::switchScene(SceneType type) {
+    std::cout << "[DEBUG] Switching scene" << std::endl;
     if (currentScene) {
         delete currentScene;
         currentScene = nullptr;
     }
     switch (type) {
         case SceneType::Lobby:
-            // std::cout << "[DEBUG] Switching to Lobby scene" << std::endl;
             currentScene = new LobbyScene(window, *this);
             break;
         case SceneType::Game:
-            // std::cout << "[DEBUG] Switching to Game scene" << std::endl;
-            // currentScene = std::make_unique<GameScene>(window, *this);
+            currentScene = new GameScene(window, *this);
             break;
         default:
             std::cerr << "[ERROR] Unknown scene type" << std::endl;
             break;
     }
+    std::cout << "[DEBUG] Scene switched" << std::endl;
 }
 
 // Getters
@@ -61,6 +58,22 @@ int Client::getPing() {
 
 int Client::getNumClients() {
     return numClients_;
+}
+
+int Client::getAction() {
+    return action;
+}
+
+int Client::getServerId() {
+    return server_id;
+}
+
+float Client::getNewX() {
+    return new_x;
+}
+
+float Client::getNewY() {
+    return new_y;
 }
 
 // Network Communication

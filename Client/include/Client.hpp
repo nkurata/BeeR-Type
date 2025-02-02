@@ -3,6 +3,10 @@
 
 #include "Packet.hpp"
 #include "Scene.hpp"
+#include "Sprite.hpp"
+#include "LobbyScene.hpp"
+#include "GameScene.hpp"
+
 
 #include <boost/asio.hpp>
 #include <boost/bind/bind.hpp>
@@ -21,16 +25,8 @@
 #include <queue>
 #include <chrono>
 
-
 #define MAX_LENGTH 1024
 #define BASE_AUDIO 0
-
-// Sprite Types
-class SpriteElement {
-public:
-    sf::Sprite sprite;
-    int id;
-};
 
 class Client {
     public:
@@ -54,14 +50,17 @@ class Client {
         int getNumClients();
         int getPing();
         void sendHeartbeatMessage();
-
+        int getAction();
+        int getServerId();
+        float getNewX();
+        float getNewY();
+        void switchScene(SceneType scene);
 
     private:
         void handle_receive(const boost::system::error_code& error, std::size_t bytes_transferred);
         void handle_send(const boost::system::error_code& error, std::size_t bytes_transferred);
         void run_receive();
 
-        void switchScene(SceneType scene);
 
         // variables
         sf::RenderWindow window;

@@ -21,6 +21,7 @@ set(CLIENT_SOURCES
     src/Client.cpp
     src/Scene.cpp
     src/LobbyScene.cpp
+    src/GameScene.cpp
 )
 
 add_library(ClientLib ${CLIENT_SOURCES})

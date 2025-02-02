@@ -1,6 +1,7 @@
 #ifndef SCENE_HPP
 #define SCENE_HPP
 
+#include "Sprite.hpp"
 #include <SFML/Graphics.hpp>
 #include <vector>
 #include <string>
@@ -16,7 +17,7 @@ enum class SceneType {
 class Scene {
 public:
     Scene(sf::RenderWindow& window, Client& client);
-    virtual ~Scene() = default;
+    virtual ~Scene(); // Add virtual destructor
 
     virtual void processEvents() = 0;
     virtual void update() = 0;
