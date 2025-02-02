@@ -9,6 +9,10 @@ using boost::asio::ip::udp;
 Client::Client(boost::asio::io_context &io_context, const std::string &host, short server_port, short client_port)
     : socket_(io_context, udp::endpoint(udp::v4(), client_port)), io_context_(io_context), window(sf::VideoMode(1280, 720), "R-Type Client"), send_timer_(io_context), receive_timer_(io_context), currentScene(nullptr), lastHeartbeatTime_(std::chrono::high_resolution_clock::now())
 {
+    keyStates_[sf::Keyboard::Right] = false;
+    keyStates_[sf::Keyboard::Left] = false;
+    keyStates_[sf::Keyboard::Up] = false;
+    keyStates_[sf::Keyboard::Down] = false;
     udp::resolver resolver(io_context);
     udp::resolver::query query(udp::v4(), host, std::to_string(server_port));
     server_endpoint_ = *resolver.resolve(query).begin();

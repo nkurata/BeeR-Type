@@ -17,9 +17,10 @@ class IGame {
 public:
     virtual ~IGame() = default;
 
-    // Pure virtual functions to be implemented by noe in GameState class
+    // Pure virtual functions to be implemented by GameState class
     virtual void update() = 0;
-    virtual void handlePlayerMove(int playerId, int actionId) = 0;
+    virtual void handlePlayerMoveStart(int playerId, int actionId) = 0;
+    virtual void handlePlayerMoveStop(int playerId, int actionId) = 0;
     virtual void killPlayers(int entityId) = 0;
     virtual void killEnemies(int entityId) = 0;
     virtual void killBullets(int entityId) = 0;
@@ -43,6 +44,9 @@ public:
     virtual void processPlayerActions() = 0;
     virtual void deletePlayerAction() = 0;
     virtual const std::vector<PlayerAction>& getPlayerActions() const = 0;
+
+    virtual void handlePlayerStartMove(int playerId, int actionId);
+    virtual void handlePlayerStopMove(int playerId, int actionId);
 };
 
 #endif // IGAME_HPP

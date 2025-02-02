@@ -47,7 +47,11 @@ void AGame::processPlayerActions() {
         int actionId = action.getActionId();
 
         if (actionId > 0 && actionId < 5) { // Change by real action ID defined in server
-            handlePlayerMove(playerId, actionId);
+            handlePlayerMoveStart(playerId, actionId);
+            action.setProcessed(true);
+            m_server->playerPacketFactory();
+        } else if (actionId > 10 && actionId < 15) { // Change by real action ID defined in server
+            handlePlayerMoveStop(playerId, actionId);
             action.setProcessed(true);
             m_server->PacketFactory();
         } else if (actionId == 5) { // Change by real action ID defined in server

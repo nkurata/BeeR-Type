@@ -47,6 +47,8 @@ private:
     UI ui;
     int nextEnemyId;
     int nextBossId;
+    bool moving;
+    std::pair<float, float> moveDirection;
 };
 
 #endif // GAME_HPP

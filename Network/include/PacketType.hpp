@@ -28,11 +28,7 @@ namespace Network {
         ENEMY_SHOOT = 12,
         ENEMY_LIFE_UPDATE = 13,
         MAP_UPDATE = 14,
-        GAME_END = 15,      //
-        PLAYER_RIGHT = 16,  //no pos
-        PLAYER_LEFT = 17,   //no pos
-        PLAYER_UP = 18,     //no pos
-        PLAYER_DOWN = 19,   //no pos
+        GAME_END = 15,      //  //no pos
         OPEN_MENU = 20,     //no pos
         MOUSE_CLICK = 21,   //pos
         CREATE_ENEMY = 22,

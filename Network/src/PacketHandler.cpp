@@ -58,10 +58,6 @@ void PacketHandler::initializeHandlers() {
     m_handlers[Network::PacketType::ENEMY_LIFE_UPDATE] = std::bind(&PacketHandler::handleEnemyLifeUpdate, this, std::placeholders::_1);
     m_handlers[Network::PacketType::MAP_UPDATE] = std::bind(&PacketHandler::handleMapUpdate, this, std::placeholders::_1);
     m_handlers[Network::PacketType::GAME_END] = std::bind(&PacketHandler::handleGameEnd, this, std::placeholders::_1);
-    m_handlers[Network::PacketType::PLAYER_RIGHT] = std::bind(&PacketHandler::handlePlayerRight, this, std::placeholders::_1);
-    m_handlers[Network::PacketType::PLAYER_LEFT] = std::bind(&PacketHandler::handlePlayerLeft, this, std::placeholders::_1);
-    m_handlers[Network::PacketType::PLAYER_UP] = std::bind(&PacketHandler::handlePlayerUp, this, std::placeholders::_1);
-    m_handlers[Network::PacketType::PLAYER_DOWN] = std::bind(&PacketHandler::handlePlayerDown, this, std::placeholders::_1);
     m_handlers[Network::PacketType::OPEN_MENU] = std::bind(&PacketHandler::handleOpenMenu, this, std::placeholders::_1);
     m_handlers[Network::PacketType::HEARTBEAT] = std::bind(&PacketHandler::handleHeartbeat, this, std::placeholders::_1);
     m_handlers[Network::PacketType::GAME_START_2] = std::bind(&PacketHandler::handlePOCStart, this, std::placeholders::_1);
@@ -224,28 +220,52 @@ void PacketHandler::handleGameEnd(const Network::Packet &packet)
     std::cout << "[PacketHandler] Handeled GAME_END packet." << std::endl;
 }
 
-void PacketHandler::handlePlayerRight(const Network::Packet &packet)
+void PacketHandler::handlePlayerRightStart(const Network::Packet &packet)
 {
     std::cout << "[PacketHandler] Handeled PLAYER_RIGHT packet." << std::endl;
     handlePlayerAction(packet, 2);
 }
 
-void PacketHandler::handlePlayerLeft(const Network::Packet &packet)
+void PacketHandler::handlePlayerLeftStart(const Network::Packet &packet)
 {
     std::cout << "[PacketHandler] Handeled PLAYER_LEFT packet." << std::endl;
     handlePlayerAction(packet, 1);
 }
 
-void PacketHandler::handlePlayerUp(const Network::Packet &packet)
+void PacketHandler::handlePlayerUpStart(const Network::Packet &packet)
 {
     std::cout << "[PacketHandler] Handled PLAYER_UP packet." << std::endl;
     handlePlayerAction(packet, 3);
 }
 
-void PacketHandler::handlePlayerDown(const Network::Packet &packet)
+void PacketHandler::handlePlayerDownStart(const Network::Packet &packet)
 {
     std::cout << "[PacketHandler] Handeled PLAYER_DOWN packet." << std::endl;
     handlePlayerAction(packet, 4);
+}
+
+void PacketHandler::handlePlayerRightStop(const Network::Packet &packet)
+{
+    std::cout << "[PacketHandler] Handeled PLAYER_RIGHT packet." << std::endl;
+    handlePlayerAction(packet, 12);
+}
+
+void PacketHandler::handlePlayerLeftStop(const Network::Packet &packet)
+{
+    std::cout << "[PacketHandler] Handeled PLAYER_LEFT packet." << std::endl;
+    handlePlayerAction(packet, 11);
+}
+
+void PacketHandler::handlePlayerUpStop(const Network::Packet &packet)
+{
+    std::cout << "[PacketHandler] Handled PLAYER_UP packet." << std::endl;
+    handlePlayerAction(packet, 13);
+}
+
+void PacketHandler::handlePlayerDownStop(const Network::Packet &packet)
+{
+    std::cout << "[PacketHandler] Handeled PLAYER_DOWN packet." << std::endl;
+    handlePlayerAction(packet, 14);
 }
 
 void PacketHandler::handleOpenMenu(const Network::Packet &packet)

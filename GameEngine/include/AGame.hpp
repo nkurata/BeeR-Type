@@ -30,25 +30,25 @@ namespace RType {
 }
 
 class AGame : public IGame {
-    protected:
-        std::vector<PlayerAction> playerActions; // Shared player action system
-        std::vector<Player> players;
-        std::vector<Enemy> enemies;
-        std::vector<Bullet> bullets;
-        std::vector<Boss> bosses;
-        Registry registry;
-        RType::Server* m_server;
-        std::mutex playerActionsMutex;
+protected:
+    std::vector<PlayerAction> playerActions; // Shared player action system
+    std::vector<Player> players;
+    std::vector<Enemy> enemies;
+    std::vector<Bullet> bullets;
+    std::vector<Boss> bosses;
+    Registry registry;
+    RType::Server* m_server;
+    std::mutex playerActionsMutex;
 
-    public:
-        AGame(RType::Server* server);
-        virtual ~AGame();
+public:
+    AGame(RType::Server* server);
+    virtual ~AGame();
 
-        // Implement player action management functions
-        void addPlayerAction(int playerId, int actionId) override;
-        void processPlayerActions() override;
-        void deletePlayerAction() override;
-        const std::vector<PlayerAction>& getPlayerActions() const override;
+    // Implement player action management functions
+    void addPlayerAction(int playerId, int actionId) override;
+    void processPlayerActions() override;
+    void deletePlayerAction() override;
+    const std::vector<PlayerAction>& getPlayerActions() const override;
 
         //Getter functions for player, bullet and enemy positions for server to build package to send to client
         std::pair<float, float> getPlayerPosition(int playerId) const override;        std::pair<float, float> getBulletPosition(int bulletId) const override;
@@ -71,7 +71,10 @@ class AGame : public IGame {
         void checkAndKillEntities(Registry::Entity entity1, Registry::Entity entity2);
         void checkCollisions();
 
-        void registerComponents();
+    void registerComponents();
+
+    virtual void handlePlayerStartMove(int playerId, int actionId);
+    virtual void handlePlayerStopMove(int playerId, int actionId) ;
 };
 
 #endif // AGAME_HPP
