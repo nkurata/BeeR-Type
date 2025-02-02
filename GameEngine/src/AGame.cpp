@@ -49,7 +49,7 @@ void AGame::processPlayerActions() {
         if (actionId > 0 && actionId < 5) { // Change by real action ID defined in server
             handlePlayerMove(playerId, actionId);
             action.setProcessed(true);
-            m_server->playerPacketFactory();
+            m_server->PacketFactory();
         } else if (actionId == 5) { // Change by real action ID defined in server
             spawnBullet(playerId);
             action.setProcessed(true);
@@ -255,38 +255,38 @@ void AGame::checkAndKillEntities(Registry::Entity entity1, Registry::Entity enti
     }
 }
 
-void AGame::checkCollisions() {
-    for (const auto& [entity1, entity2] : collision_system(
-        registry,
-        registry.get_components<Position>(),
-        registry.get_components<Drawable>(),
-        registry.get_components<Collidable>(),
-        registry.get_components<Controllable>(),
-        registry.get_components<Projectile>()
-    )) {
-        bool isProjectile1 = registry.has_component<Projectile>(entity1);
-        bool isProjectile2 = registry.has_component<Projectile>(entity2);
-        bool isPlayer1 = registry.has_component<Controllable>(entity1);
-        bool isPlayer2 = registry.has_component<Controllable>(entity2);
-        bool isEnemy1 = std::find_if(enemies.begin(), enemies.end(),
-            [entity1](auto& e){ return e.getEntity() == entity1; }) != enemies.end();
-        bool isEnemy2 = std::find_if(enemies.begin(), enemies.end(),
-            [entity2](auto& e){ return e.getEntity() == entity2; }) != enemies.end();
+// void AGame::checkCollisions() {
+//     for (const auto& [entity1, entity2] : collision_system(
+//         registry,
+//         registry.get_components<Position>(),
+//         registry.get_components<Drawable>(),
+//         registry.get_components<Collidable>(),
+//         registry.get_components<Controllable>(),
+//         registry.get_components<Projectile>()
+//     )) {
+//         bool isProjectile1 = registry.has_component<Projectile>(entity1);
+//         bool isProjectile2 = registry.has_component<Projectile>(entity2);
+//         bool isPlayer1 = registry.has_component<Controllable>(entity1);
+//         bool isPlayer2 = registry.has_component<Controllable>(entity2);
+//         bool isEnemy1 = std::find_if(enemies.begin(), enemies.end(),
+//             [entity1](auto& e){ return e.getEntity() == entity1; }) != enemies.end();
+//         bool isEnemy2 = std::find_if(enemies.begin(), enemies.end(),
+//             [entity2](auto& e){ return e.getEntity() == entity2; }) != enemies.end();
 
-        // Projectile <-> Enemy
-        if (isProjectile1 && isEnemy2) {
-            registry.kill_entity(entity1);
-            registry.kill_entity(entity2);
-        } else if (isProjectile2 && isEnemy1) {
-            registry.kill_entity(entity1);
-            registry.kill_entity(entity2);
-        }
+//         // Projectile <-> Enemy
+//         if (isProjectile1 && isEnemy2) {
+//             registry.kill_entity(entity1);
+//             registry.kill_entity(entity2);
+//         } else if (isProjectile2 && isEnemy1) {
+//             registry.kill_entity(entity1);
+//             registry.kill_entity(entity2);
+//         }
 
-        // Player <-> Enemy
-        if (isPlayer1 && isEnemy2) {
-            registry.kill_entity(entity1);
-        } else if (isPlayer2 && isEnemy1) {
-            registry.kill_entity(entity2);
-        }
-    }
-}
+//         // Player <-> Enemy
+//         if (isPlayer1 && isEnemy2) {
+//             registry.kill_entity(entity1);
+//         } else if (isPlayer2 && isEnemy1) {
+//             registry.kill_entity(entity2);
+//         }
+//     }
+// }

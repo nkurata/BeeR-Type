@@ -25,4 +25,5 @@ add_library(GameLib SHARED ${GAME_SOURCES})
 
 target_link_libraries(GameLib
     ECSLib
+    GameEngineLib
 )

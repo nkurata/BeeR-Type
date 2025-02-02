@@ -66,7 +66,7 @@ class AGame : public IGame {
         void killPlayers(int entityId) override;
         void killEntity(int entityId) override;
 
-        void run(int numPlayers) override;
+        void run(int numPlayers);
         const Registry& getEntityRegistry(Registry::Entity entity);
         void checkAndKillEntities(Registry::Entity entity1, Registry::Entity entity2);
         void checkCollisions();

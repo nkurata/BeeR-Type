@@ -31,3 +31,21 @@ target_link_libraries(R-Type
     SFML::SFML
     ECSLib
 )
+
+# GameEngine library
+include_directories(
+    ${CMAKE_SOURCE_DIR}/GameEngine/include
+)
+
+set(GAME_ENGINE_SOURCES
+    src/AGame.cpp
+    src/PlayerAction.cpp
+)
+
+add_library(GameEngineLib SHARED ${GAME_ENGINE_SOURCES})
+
+target_link_libraries(GameEngineLib
+    Boost::Boost
+    SFML::SFML
+    ECSLib
+)
