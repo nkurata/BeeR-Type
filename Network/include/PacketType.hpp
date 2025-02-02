@@ -41,13 +41,8 @@ namespace Network {
         CHANGE = 29,
         GAME_STARTED = 30,
         GAME_NOT_STARTED = 31,
-        PLAYER_RIGHT_START = 41,
-        PLAYER_RIGHT_STOP = 42,
-        PLAYER_UP_START = 43,
-        PLAYER_UP_STOP = 44,
-        PLAYER_LEFT_START = 45,
-        PLAYER_LEFT_STOP = 46,
-        PLAYER_DOWN_START = 47,
-        PLAYER_DOWN_STOP = 48,
+        UI_UPDATE = 32,
+        HEARTBEAT = 33,
+        GAME_START_2 = 34,
     };
 }

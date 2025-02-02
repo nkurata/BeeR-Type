@@ -1,18 +1,13 @@
-/*
-** EPITECH PROJECT, 2024
-** R-Type [WSL: Ubuntu]
-** File description:
-** Client
-*/
-
 #include "Client.hpp"
-
-#include <string>
+#include "Scene.hpp"
+#include "LobbyScene.hpp"
+#include "GameScene.hpp"
+#include <iostream>
 
 using boost::asio::ip::udp;
 
-RType::Client::Client(boost::asio::io_context& io_context, const std::string& host, short server_port, short client_port)
-    : socket_(io_context, udp::endpoint(udp::v4(), client_port)), io_context_(io_context), window(sf::VideoMode(1280, 720), "R-Type Client"), send_timer_(io_context) // Initialize send_timer_
+Client::Client(boost::asio::io_context &io_context, const std::string &host, short server_port, short client_port)
+    : socket_(io_context, udp::endpoint(udp::v4(), client_port)), io_context_(io_context), window(sf::VideoMode(1280, 720), "R-Type Client"), send_timer_(io_context), receive_timer_(io_context), currentScene(nullptr), lastHeartbeatTime_(std::chrono::high_resolution_clock::now())
 {
     keyStates_[sf::Keyboard::Right] = false;
     keyStates_[sf::Keyboard::Left] = false;
@@ -23,21 +18,70 @@ RType::Client::Client(boost::asio::io_context& io_context, const std::string& ho
     server_endpoint_ = *resolver.resolve(query).begin();
     std::cout << "Connected to " << host << ":" << server_port << " from client port " << client_port << std::endl;
 
-    start_receive();
+    regulate_receive(); // Start the regulated receive
     start_send_timer(); // Start the send timer
     receive_thread_ = std::thread(&Client::run_receive, this);
+
+    switchScene(SceneType::Lobby); // Start with the Lobby scene
 }
 
-RType::Client::~Client()
+Client::~Client()
 {
     io_context_.stop();
-    socket_.close();
     if (receive_thread_.joinable()) {
         receive_thread_.join();
     }
+    socket_.close();
+    delete currentScene;
 }
 
-void RType::Client::send(const std::string& message)
+void Client::switchScene(SceneType type) {
+    std::cout << "[DEBUG] Switching scene" << std::endl;
+    if (currentScene) {
+        delete currentScene;
+        currentScene = nullptr;
+    }
+    switch (type) {
+        case SceneType::Lobby:
+            currentScene = new LobbyScene(window, *this);
+            break;
+        case SceneType::Game:
+            currentScene = new GameScene(window, *this);
+            break;
+        default:
+            std::cerr << "[ERROR] Unknown scene type" << std::endl;
+            break;
+    }
+    std::cout << "[DEBUG] Scene switched" << std::endl;
+}
+
+// Getters
+int Client::getPing() {
+    return ping_;
+}
+
+int Client::getNumClients() {
+    return numClients_;
+}
+
+int Client::getAction() {
+    return action;
+}
+
+int Client::getServerId() {
+    return server_id;
+}
+
+float Client::getNewX() {
+    return new_x;
+}
+
+float Client::getNewY() {
+    return new_y;
+}
+
+// Network Communication
+void Client::send(const std::string& message)
 {
     socket_.async_send_to(
         boost::asio::buffer(message), server_endpoint_,
@@ -46,202 +90,76 @@ void RType::Client::send(const std::string& message)
                     boost::asio::placeholders::bytes_transferred));
 }
 
-void RType::Client::start_receive()
+void Client::start_receive()
 {
     socket_.async_receive_from(
         boost::asio::buffer(recv_buffer_), server_endpoint_,
-        boost::bind(&RType::Client::handle_receive, this,
+        boost::bind(&Client::handle_receive, this,
                     boost::asio::placeholders::error,
                     boost::asio::placeholders::bytes_transferred));
 }
 
-void RType::Client::handle_receive(const boost::system::error_code& error, std::size_t bytes_transferred)
+void Client::sendExitPacket()
 {
+    send(createPacket(Network::PacketType::DISCONNECTED));
+}
+
+void Client::start_send_timer() {
+    send_timer_.expires_after(std::chrono::milliseconds(1));
+    send_timer_.async_wait(boost::bind(&Client::handle_send_timer, this, boost::asio::placeholders::error));
+}
+
+void Client::handle_send_timer(const boost::system::error_code& error) {
+    if (!error) {
+        if (!send_queue_.empty()) {
+            std::string message = send_queue_.front();
+            send_queue_.pop();
+            send(message);
+        }
+        start_send_timer();
+    } else {
+        std::cerr << "[ERROR] Timer error: " << error.message() << std::endl;
+    }
+}
+
+void Client::regulate_receive()
+{
+    receive_timer_.expires_after(std::chrono::milliseconds(10)); // Set the interval to 10 milliseconds
+    receive_timer_.async_wait(boost::bind(&Client::start_receive, this));
+}
+
+// private Network Communication
+void Client::handle_receive(const boost::system::error_code& error, std::size_t bytes_transferred)
+{
+    std::lock_guard<std::mutex> lock(mutex_);
     if (!error || error == boost::asio::error::message_size) {
-        mutex_.lock();
+        packetReceived++;
         received_data.assign(recv_buffer_.data(), bytes_transferred);
         parseMessage(received_data);
-        if (action == 31) {
-            initLobbySprites(this->window);
-            action = 0;
-        }
-        start_receive();
     } else {
-        std::cerr << "[DEBUG] Error receiving: " << error.message() << std::endl;
-        start_receive();
+        std::cerr << "[ERROR] Error receiving: " << error.message() << std::endl;
     }
+    regulate_receive(); // Regulate the frequency of receive operations
 }
 
-void RType::Client::handle_send(const boost::system::error_code& error, std::size_t bytes_transferred)
+void Client::handle_send(const boost::system::error_code& error, std::size_t bytes_transferred)
 {
+    std::lock_guard<std::mutex> lock(mutex_);
     if (!error) {
-        // std::cout << "[DEBUG] Message sent." << std::endl;
+        packetSent++;
     } else {
-        std::cerr << "[DEBUG] Error sending: " << error.message() << std::endl;
+        packetLost++;
+        std::cerr << "[ERROR] Error sending: " << error.message() << std::endl;
     }
 }
 
-void RType::Client::run_receive()
+void Client::run_receive()
 {
     io_context_.run();
 }
 
-void RType::Client::createSprite()
-{
-    SpriteElement spriteElement;
-    SpriteType spriteType;
-
-    if (action == 22) { //change by used ID in server to create different types of sprites to be displayed
-        spriteType = SpriteType::Enemy;
-    } else if (action == 23) {
-        spriteType = SpriteType::Boss;
-    } else if (action == 24) {
-        spriteType = SpriteType::Player;
-    } else if (action == 25) {
-        spriteType = SpriteType::Bullet;
-    } else if (action == 26) {
-        spriteType = SpriteType::Background;
-    } else {
-        return;
-    }
-
-    spriteElement.sprite.setTexture(textures_[spriteType]);
-    spriteElement.sprite.setPosition(new_x, new_y);
-    spriteElement.id = server_id;
-    sprites_.push_back(spriteElement);
-}
-
-void RType::Client::destroySprite()
-{
-    if (action == 28) {
-        for (auto it = sprites_.begin(); it != sprites_.end(); ++it) {
-            if (server_id == it->id) {
-                sprites_.erase(it);
-                break;
-            }
-        }
-    }
-    if (action == 3) {
-        for (auto it = sprites_.begin(); it != sprites_.end(); ++it) {
-            if (it->id == -101) {
-                sprites_.erase(it);
-            }
-        }
-    }
-}
-
-void RType::Client::loadTextures() //make sure to have the right textures in the right folder
-{
-    textures_[RType::SpriteType::Enemy].loadFromFile("../assets/enemy.png");
-    textures_[RType::SpriteType::Boss].loadFromFile("../assets/boss.png");
-    textures_[RType::SpriteType::Player].loadFromFile("../assets/player.png");
-    textures_[RType::SpriteType::Bullet].loadFromFile("../assets/bullet.png");
-    textures_[RType::SpriteType::Background].loadFromFile("../assets/background.png");
-    textures_[RType::SpriteType::Start_button].loadFromFile("../assets/start_button.png");
-}
-
-void RType::Client::drawSprites(sf::RenderWindow& window)
-{
-    for (auto& spriteElement : sprites_) {
-        window.draw(spriteElement.sprite);
-    }
-}
-
-void RType::Client::updateSpritePosition()
-{
-    if (action == 29) {
-        for (auto& spriteElement : sprites_) {
-            if (server_id == spriteElement.id) {
-                spriteElement.sprite.setPosition(new_x, new_y);
-                break;
-            }
-        }
-    }
-}
-
-void RType::Client::parseMessage(std::string packet_data)
-{
-    if (packet_data.empty()) {
-        std::cerr << "[ERROR] Empty packet data." << std::endl;
-        return;
-    }
-    uint8_t packet_type = static_cast<uint8_t>(packet_data[0]);
-    std::string packet_inside = packet_data.substr(2);
-    std::cout << "[DEBUG] Received Packet Type: " << static_cast<int>(packet_type) << std::endl;
-    std::cout << "[DEBUG] Received Packet Data: " << packet_inside << std::endl;
-
-    std::vector<std::string> elements;
-    std::stringstream ss(packet_inside);
-    std::string segment;
-    while (std::getline(ss, segment, ';')) {
-        elements.push_back(segment);
-    }
-    if (elements.size() != 3) {
-        std::cerr << "[ERROR] Invalid packet format: " << packet_inside << std::endl;
-        return;
-    }
-    try {
-        action = static_cast<int>(packet_type);
-        server_id = std::stoi(elements[0]);
-        new_x = std::stof(elements[1]);
-        new_y = std::stof(elements[2]);
-
-        std::cout << "[DEBUG] Action: " << action << std::endl;
-        std::cout << "[DEBUG] Server ID: " << server_id << std::endl;
-        std::cout << "[DEBUG] New X: " << new_x << std::endl;
-        std::cout << "[DEBUG] New Y: " << new_y << std::endl;
-    } catch (const std::exception& e) {
-        std::cerr << "[ERROR] Failed to parse packet data: " << e.what() << std::endl;
-    }
-}
-
-void RType::Client::resetValues()
-{
-    action = 0;
-    server_id = 0;
-    new_x = 0.0;
-    new_y = 0.0;
-}
-
-void RType::Client::LoadSound()
-{
-    if (!buffer_background_.loadFromFile("../assets/sound.wav")) {
-        std::cerr << "[ERROR] loading sound file" << std::endl;
-    }
-    if (!buffer_shoot_.loadFromFile("../assets/shoot.wav")) {
-        std::cerr << "[ERROR] loading sound file" << std::endl;
-    }
-    sound_background_.setBuffer(buffer_background_);
-    sound_shoot_.setBuffer(buffer_shoot_);
-    sound_shoot_.setVolume(BASE_AUDIO);
-    sound_background_.setVolume(BASE_AUDIO);
-    sound_background_.setLoop(true);
-    sound_background_.play();
-}
-
-int RType::Client::main_loop()
-{
-    loadTextures();
-    send(createPacket(Network::PacketType::REQCONNECT));
-    LoadSound();
-
-    while (this->window.isOpen()) {
-        processEvents(this->window);
-        createSprite();
-        destroySprite();
-        updateSpritePosition();
-        resetValues();
-        mutex_.unlock();
-
-        this->window.clear();
-        drawSprites(window);
-        this->window.display();
-    }
-    sendExitPacket();
-    return 0;
-}
-
-std::string RType::Client::createPacket(Network::PacketType type)
+// Packet Handling
+std::string Client::createPacket(Network::PacketType type)
 {
     Network::Packet packet;
     packet.type = type;
@@ -250,7 +168,7 @@ std::string RType::Client::createPacket(Network::PacketType type)
     return packet_str;
 }
 
-std::string RType::Client::createMousePacket(Network::PacketType type, int x, int y)
+std::string Client::createMousePacket(Network::PacketType type, int x, int y)
 {
     Network::Packet packet;
     packet.type = type;
@@ -268,154 +186,98 @@ std::string deserializePacket(const std::string& packet_str)
     return packet_str;
 }
 
-void RType::Client::processEvents(sf::RenderWindow& window)
+void Client::parseMessage(std::string packet_data)
 {
-    sf::Event event;
-    while (window.pollEvent(event)) {
-        switch (event.type) {
-            case sf::Event::Closed:
-                window.close();
-                break;
-            case sf::Event::MouseButtonPressed: {
-                sf::Vector2i mousePos = sf::Mouse::getPosition(window);
-                if (!sprites_.empty()) {
-                    if (sprites_.back().id == -101) {
-                        send_queue_.push(createPacket(Network::PacketType::GAME_START));
-                        sprites_.pop_back();
-                    } else {
-                        send_queue_.push(createMousePacket(Network::PacketType::PLAYER_SHOOT, mousePos.x, mousePos.y));
-                        sound_shoot_.play();
-                    }
-                }
-                break;
-            }
-            case sf::Event::KeyPressed:
-                handleKeyPress(event.key.code, window);
-                break;
-            case sf::Event::KeyReleased:
-                handleKeyRelease(event.key.code);
-                break;
-            default:
-                break;
-        }
+    if (packet_data.empty()) {
+        std::cerr << "[ERROR] Empty packet data." << std::endl;
+        return;
+    }
+    uint8_t packet_type = static_cast<uint8_t>(packet_data[0]);
+    std::string packet_inside = packet_data.substr(2);
+
+    if (packet_type == static_cast<uint8_t>(Network::PacketType::HEARTBEAT)) {
+        handleHeartbeatMessage(packet_inside);
+        return;
+    }
+
+    std::vector<std::string> elements;
+    std::stringstream ss(packet_inside);
+    std::string segment;
+    while (std::getline(ss, segment, ';')) {
+        elements.push_back(segment);
+    }
+    if (elements.size() != 3) {
+        std::cerr << "[ERROR] Invalid packet format: " << packet_inside << std::endl;
+        return;
+    }
+    try {
+        action = static_cast<int>(packet_type);
+        server_id = std::stoi(elements[0]);
+        new_x = std::stof(elements[1]);
+        new_y = std::stof(elements[2]);
+
+        // std::cout << "[DEBUG] Action: " << action << std::endl;
+        // std::cout << "[DEBUG] Server ID: " << server_id << std::endl;
+        // std::cout << "[DEBUG] New X: " << new_x << std::endl;
+        // std::cout << "[DEBUG] New Y: " << new_y << std::endl;
+    } catch (const std::exception& e) {
+        std::cerr << "[ERROR] Failed to parse packet data: " << e.what() << std::endl;
     }
 }
 
-void RType::Client::handleKeyPress(sf::Keyboard::Key key, sf::RenderWindow& window)
+void Client::sendHeartbeatMessage()
 {
-    if (!keyStates_[key]) {
-        keyStates_[key] = true;
-        switch (key) {
-        case sf::Keyboard::Right:
-            std::cout << "[DEBUG] Sending Right Start" << std::endl;
-            send_queue_.push(createPacket(Network::PacketType::PLAYER_RIGHT_START));
-            break;
-        case sf::Keyboard::Left:
-            std::cout << "[DEBUG] Sending Left Start" << std::endl;
-            send_queue_.push(createPacket(Network::PacketType::PLAYER_LEFT_START));
-            break;
-        case sf::Keyboard::Up:
-            std::cout << "[DEBUG] Sending Up Start" << std::endl;
-            send_queue_.push(createPacket(Network::PacketType::PLAYER_UP_START));
-            break;
-        case sf::Keyboard::Down:
-            std::cout << "[DEBUG] Sending Down Start" << std::endl;
-            send_queue_.push(createPacket(Network::PacketType::PLAYER_DOWN_START));
-            break;
-        case sf::Keyboard::Q:
-            sendExitPacket();
-            window.close();
-            break;
-        case sf::Keyboard::M:
-            std::cout << "[DEBUG] Sending M" << std::endl;
-            send_queue_.push(createPacket(Network::PacketType::OPEN_MENU));
-            break;
-        case sf::Keyboard::Space:
-            std::cout << "[DEBUG] Sending Space" << std::endl;
-            send_queue_.push(createPacket(Network::PacketType::PLAYER_SHOOT));
-            break;
-        case sf::Keyboard::Escape:
-            initLobbySprites(window);
-            send_queue_.push(createPacket(Network::PacketType::GAME_END));
-            break;
-        case sf::Keyboard::Num1:
-            adjustVolume(-5);
-            break;
-        case sf::Keyboard::Num2:
-            adjustVolume(5);
-            break;
-        default:
-            break;
-        }
+    auto now = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double, std::milli> elapsed = now - lastHeartbeatTime_;
+    
+    if (elapsed.count() > 100) {
+        auto start = std::chrono::high_resolution_clock::now();
+        send_queue_.push(createPacket(Network::PacketType::HEARTBEAT));
+        heartBeatStart_ = start;
+        lastHeartbeatTime_ = now;
     }
 }
 
-void RType::Client::handleKeyRelease(sf::Keyboard::Key key) {
-    if (keyStates_[key]) {
-        keyStates_[key] = false;
-        switch (key) {
-        case sf::Keyboard::Right:
-            std::cout << "[DEBUG] Sending Right Stop" << std::endl;
-            send_queue_.push(createPacket(Network::PacketType::PLAYER_RIGHT_STOP));
-            break;
-        case sf::Keyboard::Left:
-            std::cout << "[DEBUG] Sending Left Stop" << std::endl;
-            send_queue_.push(createPacket(Network::PacketType::PLAYER_LEFT_STOP));
-            break;
-        case sf::Keyboard::Up:
-            std::cout << "[DEBUG] Sending Up Stop" << std::endl;
-            send_queue_.push(createPacket(Network::PacketType::PLAYER_UP_STOP));
-            break;
-        case sf::Keyboard::Down:
-            std::cout << "[DEBUG] Sending Down Stop" << std::endl;
-            send_queue_.push(createPacket(Network::PacketType::PLAYER_DOWN_STOP));
-            break;
-        default:
-            break;
-        }
+void Client::handleHeartbeatMessage(const std::string& data) {
+    std::vector<std::string> elements;
+    std::stringstream ss(data);
+    std::string segment;
+    while (std::getline(ss, segment, ';')) {
+        elements.push_back(segment);
     }
-}
 
-void RType::Client::adjustVolume(float change)
-{
-    float newVolume = sound_background_.getVolume() + change;
-    if (newVolume < 0) newVolume = 0;
-    if (newVolume > 100) newVolume = 100;
-    sound_background_.setVolume(newVolume);
-}
-
-void RType::Client::initLobbySprites(sf::RenderWindow& window)
-{
-    sprites_.clear();
-
-    SpriteElement backgroundElement;
-    backgroundElement.sprite.setTexture(textures_[SpriteType::Background]);
-    backgroundElement.sprite.setPosition(0, 0);
-    backgroundElement.id = -100;
-
-    SpriteElement buttonElement;
-    buttonElement.sprite.setTexture(textures_[SpriteType::Start_button]);
-    buttonElement.sprite.setPosition(window.getSize().x / 2 - textures_[SpriteType::Start_button].getSize().x / 2, window.getSize().y / 2 - textures_[SpriteType::Start_button].getSize().y / 2);
-    buttonElement.id = -101;
-
-    sprites_.push_back(backgroundElement);
-    sprites_.push_back(buttonElement);
-}
-
-void RType::Client::start_send_timer() {
-    send_timer_.expires_after(std::chrono::milliseconds(1));
-    send_timer_.async_wait(boost::bind(&Client::handle_send_timer, this, boost::asio::placeholders::error));
-}
-
-void RType::Client::handle_send_timer(const boost::system::error_code& error) {
-    if (!error) {
-        if (!send_queue_.empty()) {
-            std::string message = send_queue_.front();
-            send_queue_.pop();
-            send(message);
+    if (elements.size() > 0) {
+        int newNumClients = std::stoi(elements[0]);
+        if (newNumClients > numClients_) {
+            currentScene->addChatLog("Player connected. Total players: " + std::to_string(newNumClients));
+        } else if (newNumClients < numClients_) {
+            currentScene->addChatLog("Player disconnected. Total players: " + std::to_string(newNumClients));
         }
-        start_send_timer();
-    } else {
-        std::cerr << "[DEBUG] Timer error: " << error.message() << std::endl;
+        numClients_ = newNumClients;
     }
+
+    // Calculate the ping as the round-trip time
+    auto now = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double, std::milli> elapsed = now - heartBeatStart_;
+    ping_ = elapsed.count();
+
+    // Print the content of the heartbeat message
+    // std::cout << "[DEBUG] Heartbeat message content: " << data << std::endl;
+    // std::cout << "[DEBUG] Calculated ping: " << ping_ << " ms" << std::endl;
+}
+
+int Client::clientLoop()
+{
+    send(createPacket(Network::PacketType::REQCONNECT));
+
+    while (this->window.isOpen()) {
+        sendHeartbeatMessage();
+        currentScene->processEvents();
+        currentScene->update();
+        currentScene->render();
+
+        mutex_.unlock();
+    }
+    sendExitPacket();
+    return 0;
 }

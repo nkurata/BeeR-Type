@@ -22,13 +22,6 @@
 #include "Collidable.hpp"
 #include "Projectile.hpp"
 #include "PlayerAction.hpp"
-#include "Position.hpp"
-#include "Drawable.hpp"
-#include "Collidable.hpp"
-#include "Controllable.hpp"
-#include "Projectile.hpp"
-#include "Velocity.hpp"
-#include "Registry.hpp"
 #include <vector>
 #include <mutex>
 
@@ -57,22 +50,26 @@ public:
     void deletePlayerAction() override;
     const std::vector<PlayerAction>& getPlayerActions() const override;
 
-    // Getter functions for player, bullet and enemy positions for server to build package to send to client
-    std::pair<float, float> getPlayerPosition(int playerId) const override;
-    std::pair<float, float> getBulletPosition(int bulletId) const override;
-    std::pair<float, float> getEnemyPosition(int enemyId) const override;
-    std::pair<float, float> getBossPosition(int enemyId) const override;
+        //Getter functions for player, bullet and enemy positions for server to build package to send to client
+        std::pair<float, float> getPlayerPosition(int playerId) const override;        std::pair<float, float> getBulletPosition(int bulletId) const override;
+        std::pair<float, float> getEnemyPosition(int enemyId) const override;
+        std::pair<float, float> getBossPosition(int enemyId) const override;
 
-    // Implement entity spawn and delete management functions
-    void spawnEnemy(int enemyId, float x, float y) override;
-    void spawnBoss(int bossId, float x, float y) override;
-    void spawnPlayer(int playerId, float x, float y) override;
-    void spawnBullet(int playerId) override;
-    void killBosses(int entityId) override;
-    void killBullets(int entityId) override;
-    void killEnemies(int entityId) override;
-    void killPlayers(int entityId) override;
-    void killEntity(int entityId) override;
+        // Implement entity spawn and delete management functions
+        void spawnEnemy(int enemyId, float x, float y) override;
+        void spawnBoss(int boosId, float x, float y) override;
+        void spawnPlayer(int playerId, float x, float y) override;
+        void spawnBullet(int playerId) override;
+        void killBosses(int entityId) override;
+        void killBullets(int entityId) override;
+        void killEnemies(int entityId) override;
+        void killPlayers(int entityId) override;
+        void killEntity(int entityId) override;
+
+        void run(int numPlayers);
+        const Registry& getEntityRegistry(Registry::Entity entity);
+        void checkAndKillEntities(Registry::Entity entity1, Registry::Entity entity2);
+        void checkCollisions();
 
     void registerComponents();
 

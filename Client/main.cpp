@@ -7,7 +7,7 @@
 
 #include "Client.hpp"
 
-RType::Client* global_client = nullptr;
+Client* global_client = nullptr;
 
 void signalHandler(int signum) {
     if (global_client) {
@@ -29,10 +29,11 @@ int main(int ac, char **av)
 
     try {
         boost::asio::io_context io_context;
-        RType::Client client(io_context, host, server_port, client_port);
+        Client client(io_context, host, server_port, client_port);
+        global_client = &client;
 
         std::signal(SIGINT, signalHandler);
-        client.main_loop();
+        client.clientLoop();
     } catch (const std::exception& e) {
         std::cerr << "Exception: " << e.what() << std::endl;
     }

@@ -20,6 +20,7 @@ public:
 private:
     Registry registry;
     Registry::Entity entity;
+    int health;
 };
 
 #endif // PLAYER_HPP
