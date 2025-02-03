@@ -12,32 +12,30 @@
 #include <algorithm>
 #include <iostream>
 
-AGame::AGame(RType::Server* server) : m_server(server)
+AGame::AGame(Server* server) : server_(server)
 {
     registerComponents();
 }
 
 AGame::~AGame()
 {
-    playerActions.clear();
-    players.clear();
-    enemies.clear();
-    bullets.clear();
+    playerActions_.clear();
+    players_.clear();
 }
 
 void AGame::registerComponents()
 {
-    registry.register_component<Position>();
-    registry.register_component<Velocity>();
-    registry.register_component<Drawable>();
-    registry.register_component<Controllable>();
-    registry.register_component<Collidable>();
-    registry.register_component<Projectile>();
+    registry_.register_component<Position>();
+    registry_.register_component<Velocity>();
+    registry_.register_component<Drawable>();
+    registry_.register_component<Controllable>();
+    registry_.register_component<Collidable>();
+    registry_.register_component<Projectile>();
 }
 
 void AGame::addPlayerAction(int playerId, int actionId) {
     std::cout << "Player " << playerId << " performed action " << actionId << std::endl;
-    std::lock_guard<std::mutex> lock(playerActionsMutex);
+    std::lock_guard<std::mutex> lock(playerActionsMutex_);
     playerActions.emplace_back(playerId, actionId);
 }
 
@@ -47,21 +45,21 @@ void AGame::processPlayerActions() {
         int actionId = action.getActionId();
 
         if (actionId > 0 && actionId < 5) { // Change by real action ID defined in server
-            handlePlayerMoveStart(playerId, actionId);
+            handlePlayerStartMove(playerId, actionId);
             action.setProcessed(true);
-            m_server->playerPacketFactory();
+            server_->playerPacketFactory();
         } else if (actionId > 10 && actionId < 15) { // Change by real action ID defined in server
-            handlePlayerMoveStop(playerId, actionId);
+            handlePlayerStopMove(playerId, actionId);
             action.setProcessed(true);
-            m_server->PacketFactory();
+            server_->PacketFactory();
         } else if (actionId == 5) { // Change by real action ID defined in server
             spawnBullet(playerId);
             action.setProcessed(true);
-            m_server->bulletPacketFactory();
+            server_->bulletPacketFactory();
         }
         // Handle other actions or ignore unknown action IDs
     }
-    std::lock_guard<std::mutex> lock(playerActionsMutex);
+    std::lock_guard<std::mutex> lock(playerActionsMutex_);
     deletePlayerAction();
 }
 
@@ -112,19 +110,6 @@ std::pair<float, float> AGame::getBossPosition(int bossId) const {
     return {positionComponent->x, positionComponent->y};
 }
 
-void AGame::spawnEnemy(int enemyId, float x, float y) {
-    enemies.emplace_back(registry, x, y);
-
-    std::string data = std::to_string(enemyId + 500) + ";" + std::to_string(x) + ";" + std::to_string(y);
-    m_server->Broadcast(m_server->createPacket(Network::PacketType::CREATE_ENEMY, data));
-}
-
-void AGame::spawnBoss(int bossId, float x, float y) {
-    bosses.emplace_back(registry, x, y);
-
-    std::string data = std::to_string(bossId + 900) + ";" + std::to_string(x) + ";" + std::to_string(y);
-    m_server->Broadcast(m_server->createPacket(Network::PacketType::CREATE_BOSS, data));
-}
 
 void AGame::spawnPlayer(int playerId, float x, float y) {
     if (playerId >= 0 && playerId < 4) {
@@ -132,32 +117,17 @@ void AGame::spawnPlayer(int playerId, float x, float y) {
 
         std::string data = std::to_string(playerId) + ";" + std::to_string(x) + ";" + std::to_string(y);
         std::cout << "Player " << playerId << " spawned at " << x << ", " << y << std::endl;
-        m_server->Broadcast(m_server->createPacket(Network::PacketType::CREATE_PLAYER, data));
-    }
-}
-
-void AGame::spawnBullet(int playerId) {
-    if (playerId < players.size()) {
-        auto entity = players[playerId].getEntity();
-        if (players[playerId].getRegistry().has_component<Position>(entity)) {
-            const auto& position = players[playerId].getRegistry().get_components<Position>()[entity];
-            bullets.emplace_back(registry, position->x + 50.0f, position->y + 25.0f, 1.0f);
-
-            std::string data = std::to_string((bullets.size() - 1) + 200) + ";" + std::to_string(position->x + 50.0f) + ";" + std::to_string(position->y + 25.0f);
-            m_server->Broadcast(m_server->createPacket(Network::PacketType::CREATE_BULLET, data));
-        } else {
-            std::cerr << "Error: Player " << playerId << " does not have a Position component." << std::endl;
-        }
+        server_->Broadcast(server_->createPacket(Network::PacketType::CREATE_PLAYER, data));
     }
 }
 
 void AGame::killPlayers(int entityId) {
-    for (auto it = players.begin(); it != players.end();) {
+    for (auto it = players_.begin(); it != players_.end();) {
         if (it->getEntity() == entityId) {
-            registry.kill_entity(it->getEntity());
-            it = players.erase(it);
+            registry_.kill_entity(it->getEntity());
+            it = players_.erase(it);
             std::string data = std::to_string(entityId) + ";0;0";
-            m_server->Broadcast(m_server->createPacket(Network::PacketType::DELETE, data));
+            server_->Broadcast(server_->createPacket(Network::PacketType::DELETE, data));
             break;
         } else {
             ++it;
@@ -165,54 +135,6 @@ void AGame::killPlayers(int entityId) {
     }
 }
 
-void AGame::killEnemies(int entityId) {
-    for (auto it = enemies.begin(); it != enemies.end();) {
-        if (it->getEntity() == entityId) {
-            registry.kill_entity(it->getEntity());
-            it = enemies.erase(it);
-            std::string data = std::to_string(entityId + 500) + ";0;0";
-            m_server->Broadcast(m_server->createPacket(Network::PacketType::DELETE, data));
-            break;
-        } else {
-            ++it;
-        }
-    }
-}
-
-void AGame::killBullets(int entityId) {
-    for (auto it = bullets.begin(); it != bullets.end();) {
-        if (it->getEntity() == entityId) {
-            registry.kill_entity(it->getEntity());
-            it = bullets.erase(it);
-            std::string data = std::to_string(entityId + 200) + ";0;0";
-            m_server->Broadcast(m_server->createPacket(Network::PacketType::DELETE, data));
-            break;
-        } else {
-            ++it;
-        }
-    }
-}
-
-void AGame::killBosses(int entityId) {
-    for (auto it = bosses.begin(); it != bosses.end();) {
-        if (it->getEntity() == entityId) {
-            registry.kill_entity(it->getEntity());
-            it = bosses.erase(it);
-            std::string data = std::to_string(entityId + 900) + ";0;0";
-            m_server->Broadcast(m_server->createPacket(Network::PacketType::DELETE, data));
-            break;
-        } else {
-            ++it;
-        }
-    }
-}
-
-void AGame::killEntity(int entityId) {
-    killPlayers(entityId);
-    killEnemies(entityId);
-    killBullets(entityId);
-    killBosses(entityId);
-}
 
 void AGame::run(int numPlayers) {
     while (true) {
