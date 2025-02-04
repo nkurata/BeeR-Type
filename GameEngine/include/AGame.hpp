@@ -10,13 +10,10 @@
 
 #include "IGame.hpp"
 #include "PlayerAction.hpp"
+#include "Server.hpp"
 #include <vector>
+
 #include <mutex>
-
-namespace RType {
-    class Server;
-}
-
 class AGame : public IGame {
 protected:
     std::vector<PlayerAction> playerActions_;

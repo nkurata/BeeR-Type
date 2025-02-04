@@ -48,5 +48,9 @@ namespace Network {
         PLAYER_RIGHT = 36,
         PLAYER_UP = 37,
         PLAYER_DOWN = 38,
+        PLAYER_STOP_LEFT = 39,
+        PLAYER_STOP_RIGHT = 40,
+        PLAYER_STOP_UP = 41,
+        PLAYER_STOP_DOWN = 42,
     };
 }

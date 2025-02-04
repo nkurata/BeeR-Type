@@ -3,12 +3,11 @@
 
 #include "AGame.hpp"
 #include "Registry.hpp"
-#include "Player.hpp"
+#include "Players.hpp"
 #include "Enemy.hpp"
 #include "Bullet.hpp"
 #include "Boss.hpp"
 #include "Server.hpp"
-#include "UI.hpp"
 #include <random>
 
 class Game : public AGame {
@@ -32,6 +31,9 @@ public:
     void killPlayers(int entityId);
     void killEntity(int entityId);
 
+    std::pair<float, float> getPlayerPosition(int playerId) const;
+
+
     bool isBossSpawned() const;
     bool areEnemiesCleared() const;
     void startNextWave();
@@ -49,11 +51,9 @@ public:
     void bossPacketFactory();
     void PacketFactory();
     Game* *getGame(Server *server);
+    Registry::Entity getEntityFromMap(int mapId, std::string type);
 
 private:
-    void updateUI(sf::Time elapsed);
-    void sendUIUpdate();
-    void renderUI(sf::RenderWindow& window);
 
     std::unordered_map<int, Player> players;
     std::unordered_map<int, Enemy> enemies;
@@ -69,10 +69,6 @@ private:
     int currentWave;
     int enemiesPerWave;
     std::chrono::steady_clock::time_point lastSpawnTime;
-    sf::Clock gameClock;
-    float gameTime;
-    int score;
-    UI ui;
     int nextEnemyId;
     int nextBossId;
 };

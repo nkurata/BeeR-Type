@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.14)
-project(R-Type_Library)
+project(GameEngine)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -17,35 +17,16 @@ include_directories(
     ${CMAKE_SOURCE_DIR}/ECS/components
 )
 
-# The R-Type "core" library sources
-set(RTYPE_SOURCES
+set(GAMEENGINE_SOURCES
     src/AGame.cpp
     src/PlayerAction.cpp
 )
 
-add_library(R-Type ${RTYPE_SOURCES})
+add_library(GameEngine ${GAMEENGINE_SOURCES})
 
 # Link against Boost::Boost, SFML::SFML, ECSLib if needed
-target_link_libraries(R-Type
+target_link_libraries(GameEngine
     Boost::Boost
     SFML::SFML
-    ECSLib
-)
-
-# GameEngine library
-include_directories(
-    ${CMAKE_SOURCE_DIR}/GameEngine/include
-)
-
-set(GAME_ENGINE_SOURCES
-    src/AGame.cpp
-    src/PlayerAction.cpp
-)
-
-add_library(GameEngineLib SHARED ${GAME_ENGINE_SOURCES})
-
-target_link_libraries(GameEngineLib
-    Boost::Boost
-    SFML::SFML
-    ECSLib
+    ECS
 )

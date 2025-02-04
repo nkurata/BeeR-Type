@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.14)
-project(Game)
+project(R-Type)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -13,17 +13,19 @@ include_directories(
     ${CMAKE_SOURCE_DIR}/ECS/components
 )
 
-set(GAME_SOURCES
-    src/Player.cpp
+set(RTYPE_SOURCES
+    src/Players.cpp
     src/Enemy.cpp
     src/Bullet.cpp
     src/Boss.cpp
     src/Game.cpp
 )
 
-add_library(GameLib SHARED ${GAME_SOURCES})
+add_library(R-Type SHARED ${RTYPE_SOURCES})
 
-target_link_libraries(GameLib
-    ECSLib
-    GameEngineLib
+target_link_libraries(R-Type
+    ECS
+    GameEngine
 )
+
+set_target_properties(R-Type PROPERTIES PREFIX "" SUFFIX ".so" LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/lib)

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.14)
-project(R-Type)
+project(Client)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -18,20 +18,17 @@ include_directories(
 )
 
 # The Client library sources
-set(RTYPE_SOURCES
+set(CLIENT_SOURCES
     src/Client.cpp
     src/Scene.cpp
     src/LobbyScene.cpp
     src/GameScene.cpp
 )
 
-add_library(R-Type SHARED ${CLIENT_SOURCES})
+add_library(Client SHARED ${CLIENT_SOURCES})
 
-# Link with R-Type if it uses game logic, Boost if needed, SFML if needed, ECSLib, etc.
-target_link_libraries(R-Type
+target_link_libraries(Client
     Boost::Boost
     SFML::SFML
-    ECSLib
+    ECS
 )
-
-set_target_properties(R-Type PROPERTIES PREFIX "" SUFFIX ".so" LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/lib)

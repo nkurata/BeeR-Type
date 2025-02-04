@@ -30,13 +30,13 @@ set(NETWORK_HEADERS
 )
 
 # Create Network library
-add_library(NetworkLib ${NETWORK_SOURCES} ${NETWORK_HEADERS})
+add_library(Network ${NETWORK_SOURCES} ${NETWORK_HEADERS})
 
 # Include directories
-target_include_directories(NetworkLib PUBLIC include)
+target_include_directories(Network PUBLIC include)
 
 # Link dependencies
-target_link_libraries(NetworkLib
+target_link_libraries(Network
     Boost::Boost
     SFML::SFML
 )
