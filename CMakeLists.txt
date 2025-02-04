@@ -31,8 +31,8 @@ add_subdirectory(ECS)
 add_subdirectory(Network)
 add_subdirectory(Client)
 add_subdirectory(Server)
-add_subdirectory(GameEngine)
-add_subdirectory(BeeR-Type)
+# add_subdirectory(GameEngine)
+# add_subdirectory(BeeR-Type)
 
 # --- FetchContent setup ---
 include(FetchContent)
@@ -98,8 +98,8 @@ target_link_libraries(r-type_client
     ClientLib
     Boost::Boost
     SFML::SFML
-    GameLib
-    GameEngineLib
+    # GameLib
+    # GameEngineLib
 )
 
 # Server main
@@ -108,6 +108,6 @@ target_link_libraries(r-type_server
     ServerLib
     Boost::Boost
     SFML::SFML
-    GameLib
-    GameEngineLib
+    # GameLib
+    # GameEngineLib
 )

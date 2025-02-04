@@ -34,5 +34,6 @@ target_link_libraries(ServerLib
     SFML::SFML
     ECSLib
     NetworkLib
-    GameEngineLib
+    # GameEngineLib
 )
+-

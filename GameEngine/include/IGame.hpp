@@ -31,8 +31,6 @@ public:
     virtual void killPlayers(int entityId) = 0;
     virtual size_t getPlayerCount() const = 0;
 
-    const Registry& getEntityRegistry(Registry::Entity entity);
-    void checkAndKillEntities(Registry::Entity entity1, Registry::Entity entity2);
     void registerComponents();
 };
 

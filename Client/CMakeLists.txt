@@ -14,6 +14,7 @@ include_directories(
     ${CMAKE_SOURCE_DIR}/ECS
     ${CMAKE_SOURCE_DIR}/ECS/systems
     ${CMAKE_SOURCE_DIR}/ECS/components
+    ${CMAKE_SOURCE_DIR}/Client/include
 )
 
 # The Client library sources

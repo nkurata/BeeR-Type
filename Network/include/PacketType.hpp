@@ -44,5 +44,9 @@ namespace Network {
         UI_UPDATE = 32,
         HEARTBEAT = 33,
         GAME_START_2 = 34,
+        PLAYER_LEFT = 35,
+        PLAYER_RIGHT = 36,
+        PLAYER_UP = 37,
+        PLAYER_DOWN = 38,
     };
 }

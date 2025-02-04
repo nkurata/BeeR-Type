@@ -30,12 +30,6 @@ namespace RType {
 }
 
 class AGame : public IGame {
-protected:
-    std::unordered_map<int, Player> players_;
-    Registry registry_;
-    Server* server_;
-    std::vector<PlayerAction> playerActions_;
-    std::mutex playerActionsMutex_;
 public:
     AGame(Server* server);
     virtual ~AGame();
@@ -47,15 +41,21 @@ public:
     const std::vector<PlayerAction>& getPlayerActions() const override;
 
     // Implement player management functions
-    virtual std::pair<float, float> getPlayerPosition(int playerId) const = 0;
-    virtual void spawnPlayer(int playerId, float x, float y) = 0;
-    virtual void killPlayers(int entityId) = 0;
-    virtual void handlePlayerStartMove(int playerId, int actionId);
-    virtual void handlePlayerStopMove(int playerId, int actionId);
-    virtual size_t getPlayerCount() const = 0;
+    virtual std::pair<float, float> getPlayerPosition(int playerId) const;
+    virtual void spawnPlayer(int playerId, float x, float y);
+    virtual void killPlayers(int entityId);
+    virtual size_t getPlayerCount() const;
 
-    //Registery functions
+    // Registry functions
     void registerComponents();
+    Registry& getRegistry();
+
+protected:
+    std::unordered_map<int, Player> players_;
+    Registry registry_;
+    Server* server_;
+    std::vector<PlayerAction> playerActions_;
+    std::mutex playerActionsMutex_;
 };
 
-#endif // AGAME_HPP
+-#endif // AGAME_HPP

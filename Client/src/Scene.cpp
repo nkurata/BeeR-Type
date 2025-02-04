@@ -19,10 +19,6 @@ Scene::Scene(sf::RenderWindow& window, Client& client)
     chat_text_.setPosition(10, 50);
 }
 
-Scene::~Scene() {
-    // Destructor implementation
-}
-
 void Scene::updatePing() {
     current_ping_ = client.getPing();
     ping_text_.setString("Ping: " + std::to_string(current_ping_) + " ms");

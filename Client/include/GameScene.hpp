@@ -2,6 +2,7 @@
 #define GAME_SCENE_HPP
 
 #include "Scene.hpp"
+#include "Sprite.hpp"
 #include "Client.hpp"
 #include <unordered_map>
 #include <vector>

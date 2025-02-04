@@ -1,18 +1,18 @@
 #ifndef LOBBY_SCENE_HPP
 #define LOBBY_SCENE_HPP
 
-#include "Scene.hpp"
-#include "Client.hpp" // Include Client.hpp to use SpriteElement and SpriteType
-#include <unordered_map>
 #include "Sprite.hpp"
+#include "Scene.hpp"
+#include "Client.hpp"
+#include <unordered_map>
 
 class LobbyScene : public Scene {
 public:
     LobbyScene(sf::RenderWindow& window, Client& client);
-    ~LobbyScene(); // Add destructor
     void processEvents() override;
     void update() override;
     void render() override;
+
 
 private:
     void loadAssets();
