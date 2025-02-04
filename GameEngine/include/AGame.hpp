@@ -58,4 +58,4 @@ protected:
     std::mutex playerActionsMutex_;
 };
 
--#endif // AGAME_HPP
+#endif // AGAME_HPP
