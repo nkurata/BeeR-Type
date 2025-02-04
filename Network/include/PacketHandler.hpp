@@ -16,11 +16,12 @@
 #include "Packet.hpp"
 #include "PacketType.hpp"
 #include "Server.hpp"
+#include "Game.hpp"
 
 namespace Network {
     class PacketHandler {
     public:
-        PacketHandler(ThreadSafeQueue<Network::Packet>& queue, Server& server);
+        PacketHandler(ThreadSafeQueue<Network::Packet>& queue, Server& server, Game& game);
         ~PacketHandler();
 
         void start();
@@ -66,6 +67,7 @@ namespace Network {
         std::thread m_thread;
         std::atomic<bool> m_running{false};
         std::mutex m_mutex;
+        Game& m_game;
 
         std::unordered_map<Network::PacketType, std::function<void(const Network::Packet&)>> m_handlers;
     };

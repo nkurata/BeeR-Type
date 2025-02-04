@@ -10,6 +10,8 @@
 #include "Packet.hpp"
 #include "ThreadSafeQueue.hpp"
 #include "PacketHandler.hpp"
+#include "Game.hpp"
+#include <dlfcn.h>
 
 short parsePort(int ac, char **av)
 {
@@ -24,6 +26,27 @@ short parsePort(int ac, char **av)
     }
 }
 
+
+typedef IGame *createGame_t(Server &server);
+
+IGame *getGameInstance(const std::string &path, Server &server)
+{
+    void *handle = dlopen(path.c_str(), RTLD_LAZY);
+    if (!handle) {
+        throw std::runtime_error(dlerror());
+    }
+    auto *createGame = (createGame_t *)dlsym(handle, "getRTypeGame");
+    const char *dlsym_error = dlerror();
+    if (dlsym_error) {
+        throw std::runtime_error(dlsym_error);
+    } if (!createGame) {
+        throw std::runtime_error(dlerror());
+    } if (handle) {
+        dlclose(handle);
+    }
+    return createGame(server);
+}
+
 void runServer(short port) {
     try {
         boost::asio::io_context io_context;
@@ -31,11 +54,13 @@ void runServer(short port) {
 
         Server server(io_context, port, packetQueue);
 
-        // GameState game(&server);
-
+        IGame *game = getGameInstance("R-Type.so", server);
+        if (!game) {
+            throw RType::UnknownException("Failed to load game instance");
+        }
         // server.setGameState(&game);
 
-        Network::PacketHandler packetHandler(packetQueue, server);
+        Network::PacketHandler packetHandler(packetQueue, server, dynamic_cast<Game &>(*game));
         packetHandler.start();
 
         std::cout << "Server started\nListening on UDP port " << port << std::endl;

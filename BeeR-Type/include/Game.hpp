@@ -2,26 +2,45 @@
 #define GAME_HPP
 
 #include "AGame.hpp"
+#include "Registry.hpp"
+#include "Player.hpp"
+#include "Enemy.hpp"
+#include "Bullet.hpp"
+#include "Boss.hpp"
+#include "Server.hpp"
 #include "UI.hpp"
+#include <random>
 
-class RTypeGame : public AGame {
+class Game : public AGame {
 public:
-    RTypeGame(RType::Server* server);
+    Game(Server* server);
 
+    void registerComponents() override;
+    void processPlayerActions() override;
     void initializeplayers(int numPlayers);
     void update() override;
-    void handlePlayerMove(int playerId, int actionId) override;
-    void run(int numPlayers) override;
+    void handlePlayerMove(int playerId, int actionId);
+    void run(int numPlayers);
+
+    void spawnEnemy(int enemyId, float x, float y);
+    void spawnBoss(int boosId, float x, float y);
+    void spawnPlayer(int playerId, float x, float y);
+    void spawnBullet(int playerId);
+    void killBosses(int entityId);
+    void killBullets(int entityId);
+    void killEnemies(int entityId);
+    void killPlayers(int entityId);
+    void killEntity(int entityId);
 
     bool isBossSpawned() const;
     bool areEnemiesCleared() const;
     void startNextWave();
     void spawnEnemiesRandomly();
 
-    size_t getPlayerCount() const override;
-    size_t getEnemiesCount() const override;
-    size_t getBulletsCount() const override;
-    size_t getBossCount() const override;
+    size_t getPlayerCount() const;
+    size_t getEnemiesCount() const;
+    size_t getBulletsCount() const;
+    size_t getBossCount() const;
 
     bool hasPositionChanged(int id, float x, float y, std::unordered_map<int, std::pair<float, float>>& lastKnownPositions);
     void playerPacketFactory();
@@ -29,12 +48,20 @@ public:
     void bulletPacketFactory();
     void bossPacketFactory();
     void PacketFactory();
+    Game* *getGame(Server *server);
 
 private:
     void updateUI(sf::Time elapsed);
     void sendUIUpdate();
     void renderUI(sf::RenderWindow& window);
 
+    std::unordered_map<int, Player> players;
+    std::unordered_map<int, Enemy> enemies;
+    std::unordered_map<int, Bullet> bullets;
+    std::unordered_map<int, Boss> bosses;
+
+    Server* server_;
+    Registry registry;
     std::mt19937 rng;
     std::uniform_real_distribution<float> distX;
     std::uniform_real_distribution<float> distY;
@@ -42,13 +69,12 @@ private:
     int currentWave;
     int enemiesPerWave;
     std::chrono::steady_clock::time_point lastSpawnTime;
+    sf::Clock gameClock;
     float gameTime;
-    float score;
+    int score;
     UI ui;
     int nextEnemyId;
     int nextBossId;
-    bool moving;
-    std::pair<float, float> moveDirection;
 };
 
 #endif // GAME_HPP

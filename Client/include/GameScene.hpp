@@ -23,7 +23,8 @@ private:
     void createSprite(int action, int server_id, float new_x, float new_y);
     void adjustVolume(float change);
     void LoadSound();
-    void handleKeyPress(sf::Keyboard::Key key, sf::RenderWindow& window);
+    void handleKeyPress(sf::Keyboard::Key key);
+    void handleKeyUnpress(sf::Keyboard::Key key);
 
     std::unordered_map<int, SpriteElement> players_;
     std::unordered_map<int, SpriteElement> enemies_;

@@ -5,7 +5,7 @@
 
 class Bullet {
 public:
-    Bullet(Registry registry, float x, float y, float speed);
+    Bullet(Registry& registry, float x, float y, float speed);
     ~Bullet();
 
     void move(float x, float y);
@@ -15,7 +15,7 @@ public:
     void setRegistry(const Registry& newRegistry);
 
 private:
-    Registry registry;
+    Registry& registry;
     Registry::Entity entity;
 };
 

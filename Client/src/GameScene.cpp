@@ -142,7 +142,7 @@ void GameScene::processEvents() {
         if (event.type == sf::Event::Closed) {
             window.close();
         } else if (event.type == sf::Event::KeyPressed) {
-            handleKeyPress(event.key.code, window);
+            handleKeyPress(event.key.code);
         } else if (event.type == sf::Event::MouseButtonPressed) {
             sf::Vector2i mousePos = sf::Mouse::getPosition(window);
             if (!players_.empty()) {
@@ -152,7 +152,7 @@ void GameScene::processEvents() {
     }
 }
 
-void GameScene::handleKeyPress(sf::Keyboard::Key key, sf::RenderWindow& window)
+void GameScene::handleKeyPress(sf::Keyboard::Key key)
 {
     switch (key) {
         case sf::Keyboard::Right:
@@ -169,11 +169,6 @@ void GameScene::handleKeyPress(sf::Keyboard::Key key, sf::RenderWindow& window)
 
         case sf::Keyboard::Down:
             client.send(client.createPacket(Network::PacketType::PLAYER_DOWN));
-            break;
-
-        case sf::Keyboard::Q:
-            client.send(client.createPacket(Network::PacketType::DISCONNECTED));
-            window.close();
             break;
 
         case sf::Keyboard::M:
@@ -195,6 +190,30 @@ void GameScene::handleKeyPress(sf::Keyboard::Key key, sf::RenderWindow& window)
 
         case sf::Keyboard::Num2:
             adjustVolume(5);
+            break;
+
+        default:
+            break;
+    }
+}
+
+void GameScene::handleKeyUnpress(sf::Keyboard::Key key)
+{
+    switch (key) {
+        case sf::Keyboard::Right:
+            client.send(client.createPacket(Network::PacketType::PLAYER_STOP_RIGHT));
+            break;
+
+        case sf::Keyboard::Left:
+            client.send(client.createPacket(Network::PacketType::PLAYER_STOP_LEFT));
+            break;
+
+        case sf::Keyboard::Up:
+            client.send(client.createPacket(Network::PacketType::PLAYER_STOP_UP));
+            break;
+
+        case sf::Keyboard::Down:
+            client.send(client.createPacket(Network::PacketType::PLAYER_STOP_DOWN));
             break;
 
         default:

@@ -13,13 +13,14 @@
 #include "Collidable.hpp"
 #include <iostream>
 
-Player::Player(Registry registry, float x, float y) : registry(registry) {
+Player::Player(Registry& registry, float x, float y) : registry(registry) {
     entity = this->registry.spawn_entity();
     this->registry.add_component<Position>(entity, {x, y});
     this->registry.add_component<Velocity>(entity, {0.0f, 0.0f});
-    this->registry.add_component<Drawable>(entity, {sf::RectangleShape(sf::Vector2f(50.0f, 50.0f))});
+    this->registry.add_component<Drawable>(entity, {});
     this->registry.add_component<Controllable>(entity, {});
     this->registry.add_component<Collidable>(entity, {true});
+    health = 100;
 }
 
 Player::~Player() {
