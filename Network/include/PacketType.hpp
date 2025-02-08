@@ -31,9 +31,12 @@ namespace Network {
         PLAYER_DOWN = 21,
         PLAYER_LEFT = 22,
         PLAYER_RIGHT = 23,
-        PLAYER_STOP = 24,
-        PLAYER_SHOOT = 25,
-        PLAYER_BLAST = 26,
+        PLAYER_STOP_U = 24,
+        PLAYER_STOP_D = 25,
+        PLAYER_STOP_L = 26,
+        PLAYER_STOP_R = 27,
+        PLAYER_SHOOT = 28,
+        PLAYER_BLAST = 29,
         
         HEARTBEAT = 99,
     };

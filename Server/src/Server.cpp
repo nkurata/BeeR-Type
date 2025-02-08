@@ -51,7 +51,6 @@ void Server::send_to_client(const std::string& message, const udp::endpoint& cli
 void Server::Broadcast(const std::string& message)
 {
     {
-        std::lock_guard<std::mutex> lock(clients_mutex_);
         send_queue_.push(message); // Add to queue
     }
 }

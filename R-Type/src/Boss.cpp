@@ -20,7 +20,6 @@ Boss::Boss(Registry& registry, float x, float y) : registry(registry) {
 }
 
 Boss::~Boss() {
-    registry.kill_entity(entity);
 }
 
 void Boss::move(float x, float y) {

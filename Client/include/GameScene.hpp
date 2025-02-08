@@ -2,16 +2,11 @@
 #define GAME_SCENE_HPP
 
 #include "Scene.hpp"
-#include "Sprite.hpp"
 #include "Client.hpp"
 #include "Registry.hpp"
-#include "PositionSystem.hpp"
-#include "ProjectileSystem.hpp"
-#include "DrawSystem.hpp"
 #include "RTYPEPlayer.hpp"
 #include "RTYPEEnemy.hpp"
 #include "RTYPEBoss.hpp"
-#include "RTYPEBullet.hpp"
 #include <unordered_map>
 #include <vector>
 #include <SFML/Graphics.hpp>
@@ -28,15 +23,16 @@ public:
     void render() override;
 
 private:
-    void createSprite();
     void initBackground();
     void handleKeyPress(sf::Keyboard::Key key);
     void handleKeyUnpress(sf::Keyboard::Key key);
     void handleServerActions();
 
+
     std::unordered_map<int, std::unique_ptr<Player>> players_;
-    std::unordered_map<int, std::unique_ptr<Enemy>> enemies_;
-    std::unordered_map<int, std::unique_ptr<Boss>> bosses_;
+    std::vector<std::unique_ptr<Enemy>> enemies_;
+    std::vector<std::unique_ptr<Boss>> bosses_;
+    std::vector<std::unique_ptr<Bullet>> bullets_;
     Registry registry_;
     sf::Sprite backgroundSprite;
     sf::Texture backgroundTexture;

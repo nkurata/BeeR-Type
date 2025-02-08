@@ -20,6 +20,15 @@ public:
         return entity;
     }
 
+    void setVelocity(float vx, float vy) {
+        auto& velocity = registry.get_components<Velocity>()[entity];
+        if (!velocity) {
+            throw std::runtime_error("Velocity component not found for entity");
+        }
+        velocity->vx = vx;
+        velocity->vy = vy;
+    }
+
 private:
     Registry& registry;
     Registry::Entity entity;

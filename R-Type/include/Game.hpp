@@ -13,7 +13,7 @@
 class Game : public AGame {
 public:
     Game(Server* server);
-    ~Game() override = default;
+    ~Game() override;
     void update() override;
 
     void processPlayerActions() override;
@@ -21,10 +21,11 @@ public:
     void handlePlayerMove(int playerId, int actionId);
     void run(int numPlayers);
 
-    void spawnEnemy(int enemyId, float x, float y);
-    void spawnBoss(int boosId, float x, float y);
+    void spawnEnemy(float x, float y);
+    void spawnBoss(float x, float y);
     void spawnPlayer(int playerId, float x, float y);
     void spawnBullet(int playerId);
+    void spawnBlast(int playerId);
     void killBosses(int entityId);
     void killBullets(int entityId);
     void killEnemies(int entityId);
@@ -41,13 +42,11 @@ public:
 
     size_t getPlayerCount() const;
     size_t getEnemiesCount() const;
-    size_t getBulletsCount() const;
     size_t getBossCount() const;
 
     bool hasPositionChanged(int id, float x, float y, std::unordered_map<int, std::pair<float, float>>& lastKnownPositions);
     void playerPacketFactory();
     void enemyPacketFactory();
-    void bulletPacketFactory();
     void bossPacketFactory();
     void PacketFactory();
     Game* *getGame(Server *server);
@@ -55,10 +54,9 @@ public:
 
 private:
 
-    std::unordered_map<int, Player*> players;
-    std::unordered_map<int, Enemy*> enemies;
-    std::unordered_map<int, Bullet*> bullets;
-    std::unordered_map<int, Boss*> bosses;
+    std::unordered_map<int, std::unique_ptr<Player>> players;
+    std::vector<std::unique_ptr<Enemy>> enemies;
+    std::vector<std::unique_ptr<Boss>> bosses;
 
     Server* server_;
     Registry registry;
@@ -69,9 +67,6 @@ private:
     int currentWave;
     int enemiesPerWave;
     std::chrono::steady_clock::time_point lastSpawnTime;
-    int nextEnemyId;
-    int nextBossId;
-    int nextBulletId;
 };
 
 #endif // GAME_HPP

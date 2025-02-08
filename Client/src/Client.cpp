@@ -208,17 +208,16 @@ void Client::parseMessage(std::string packet_data)
         std::cerr << "[ERROR] Invalid packet data." << std::endl;
         return;
     }
+    if (packet_type == static_cast<uint8_t>(Network::PacketType::GAME_START)) {
+        switchScene(SceneType::Game);
+        return;
+    }
 
     try {
         action = static_cast<int>(packet_type);
         server_id = std::stoi(elements[0]);
         new_x = std::stof(elements[1]);
         new_y = std::stof(elements[2]);
-
-        std::cout << "[DEBUG] Action: " << action << std::endl;
-        std::cout << "[DEBUG] Server ID: " << server_id << std::endl;
-        std::cout << "[DEBUG] New X: " << new_x << std::endl;
-        std::cout << "[DEBUG] New Y: " << new_y << std::endl;
     } catch (const std::exception& e) {
         std::cerr << "[ERROR] Failed to parse packet data: " << e.what() << std::endl;
     }
@@ -229,7 +228,7 @@ void Client::sendHeartbeatMessage()
     auto now = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double, std::milli> elapsed = now - lastHeartbeatTime_;
     
-    if (elapsed.count() > 100) {
+    if (elapsed.count() > 1000) {
         auto start = std::chrono::high_resolution_clock::now();
         send_queue_.push(createPacket(Network::PacketType::HEARTBEAT));
         heartBeatStart_ = start;

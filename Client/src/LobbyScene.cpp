@@ -11,7 +11,7 @@ LobbyScene::~LobbyScene() {
     player_texts_.clear();
     scenes_.clear();
     buttons_.clear();
-    players_.clear();
+    icons_.clear();
 }
 
 void LobbyScene::loadAssets() {
@@ -60,7 +60,7 @@ void LobbyScene::initLobbySprites() {
         playerElement.sprite.setScale(0.40f, 0.40f);
         playerElement.sprite.setPosition(50 + i * (playerElement.sprite.getGlobalBounds().width + 20), window.getSize().y - playerElement.sprite.getGlobalBounds().height - 50);
         playerElement.id = i;
-        players_[i] = playerElement;
+        icons_[i] = playerElement;
 
         sf::Text playerText;
         playerText.setFont(font_);
@@ -105,7 +105,7 @@ void LobbyScene::update() {
     numClients_ = client.getNumClients();
     updatePing(); // Update the ping text
     initLobbySprites();
-    handleServerActions();
+    // handleServerActions();
 }
 
 void LobbyScene::render() {
@@ -117,7 +117,7 @@ void LobbyScene::render() {
     for (const auto& button : buttons_) {
         window.draw(button.second.sprite);
     }
-    for (const auto& player : players_) {
+    for (const auto& player : icons_) {
         window.draw(player.second.sprite);
     }
     for (const auto& text : player_texts_) {

@@ -23,7 +23,7 @@ private:
 
     std::unordered_map<int, SpriteElement> scenes_;
     std::unordered_map<int, SpriteElement> buttons_;
-    std::unordered_map<int, SpriteElement> players_;
+    std::unordered_map<int, SpriteElement> icons_;
     std::vector<sf::Text> player_texts_;
     std::unordered_map<SpriteType, sf::Texture> textures_;
 };

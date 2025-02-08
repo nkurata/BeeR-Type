@@ -19,7 +19,6 @@ AGame::~AGame() {
 }
 
 void AGame::addPlayerAction(int playerId, int actionId) {
-    std::cout << "Player " << playerId << " performed action " << static_cast<int>(actionId) << std::endl;
     std::lock_guard<std::mutex> lock(playerActionsMutex_);
     playerActions_.emplace_back(playerId, actionId);
 }

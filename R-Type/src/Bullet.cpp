@@ -17,9 +17,7 @@ Bullet::Bullet(Registry& registry, float x, float y, float speed) : registry(reg
     registry.add_component<Projectile>(entity, {speed});
 }
 
-Bullet::~Bullet() {
-    registry.kill_entity(entity);
-}
+Bullet::~Bullet() {}
 
 
 void Bullet::move(float x, float y) {
@@ -43,3 +41,4 @@ const Registry& Bullet::getRegistry() const {
 void Bullet::setRegistry(const Registry& newRegistry) {
     registry = newRegistry;
 }
+

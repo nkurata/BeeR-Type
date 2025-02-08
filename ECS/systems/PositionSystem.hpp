@@ -11,6 +11,7 @@
 #include "Registry.hpp"
 #include "Position.hpp"
 #include "Velocity.hpp"
+#include <iostream>
 
 inline void positionSystem(Registry& registry, sparse_array<Position>& positions, sparse_array<Velocity>& velocities) {
     for (size_t i = 0; i < positions.size() && i < velocities.size(); ++i) {
@@ -20,6 +21,8 @@ inline void positionSystem(Registry& registry, sparse_array<Position>& positions
         if (pos && vel) {
             pos->x += vel->vx;
             pos->y += vel->vy;
+        } else {
+            std::cout << "[DEBUG] Missing component for entity " << i << std::endl;
         }
     }
 }

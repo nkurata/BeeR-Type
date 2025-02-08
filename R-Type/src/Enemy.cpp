@@ -20,7 +20,6 @@ Enemy::Enemy(Registry &registry, float x, float y) : registry(registry) {
 }
 
 Enemy::~Enemy() {
-    registry.kill_entity(entity);
 }
 
 Registry::Entity Enemy::getEntity() const {

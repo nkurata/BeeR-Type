@@ -46,7 +46,10 @@ namespace Network {
         void handlePlayerDown(const Network::Packet &packet);
         void handlePlayerLeft(const Network::Packet &packet);
         void handlePlayerRight(const Network::Packet &packet);
-        void handlePlayerStop(const Network::Packet &packet);
+        void handlePlayerStopU(const Network::Packet &packet);
+        void handlePlayerStopD(const Network::Packet &packet);
+        void handlePlayerStopL(const Network::Packet &packet);
+        void handlePlayerStopR(const Network::Packet &packet);
 
         void handlePlayerAction(const Network::Packet &packet, Network::PacketType action);
         void handleHeartbeat(const Network::Packet &packet);
