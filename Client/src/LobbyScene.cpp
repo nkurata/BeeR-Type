@@ -5,7 +5,13 @@ LobbyScene::LobbyScene(sf::RenderWindow& window, Client& client)
     : Scene(window, client)
 {
     loadAssets();
-    initLobbySprites();
+}
+
+LobbyScene::~LobbyScene() {
+    player_texts_.clear();
+    scenes_.clear();
+    buttons_.clear();
+    players_.clear();
 }
 
 void LobbyScene::loadAssets() {
@@ -76,10 +82,11 @@ void LobbyScene::processEvents() {
         } else if (event.type == sf::Event::MouseButtonPressed) {
             sf::Vector2i mousePos = sf::Mouse::getPosition(window);
             if (buttons_.find(-101) != buttons_.end() && buttons_[-101].sprite.getGlobalBounds().contains(mousePos.x, mousePos.y)) {
-                client.send(client.createPacket(Network::PacketType::GAME_START)); // Call createPacket correctly
+                std::cout << "Game starting..." << std::endl;
+                client.switchScene(SceneType::Game);
                 buttons_.erase(-101);
             } if (buttons_.find(-102) != buttons_.end() && buttons_[-102].sprite.getGlobalBounds().contains(mousePos.x, mousePos.y)) {
-                client.send(client.createPacket(Network::PacketType::GAME_START_2)); // Call createPacket correctly
+                client.switchScene(SceneType::Game);
                 buttons_.erase(-102);
             }
         }

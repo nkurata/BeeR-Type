@@ -1,6 +1,7 @@
 #include "Client.hpp"
 #include "Scene.hpp"
 #include "LobbyScene.hpp"
+#include "GameScene.hpp"
 #include <iostream>
 
 using boost::asio::ip::udp;
@@ -15,7 +16,7 @@ Client::Client(boost::asio::io_context &io_context, const std::string &host, sho
     std::cout << "Connected to " << host << ":" << server_port << " from client port " << client_port << std::endl;
 
     regulate_receive(); // Start the regulated receive
-    start_send_timer(); // Start the send timer
+    startSendTimer(); // Start the send timer
     receive_thread_ = std::thread(&Client::run_receive, this);
     // std::cout << "[DEBUG] Client constructor finished" << std::endl;
 
@@ -30,23 +31,31 @@ Client::~Client()
         receive_thread_.join();
     }
     socket_.close();
-    delete currentScene;
+    currentScene.reset();
     // std::cout << "[DEBUG] Client destructor finished" << std::endl;
 }
 
+void Client::resetValues()
+{
+    action = 0;
+    server_id = 0;
+    new_x = 0.0;
+    new_y = 0.0;
+}
+
+#include "Client.hpp"
+
 void Client::switchScene(SceneType type) {
-    if (currentScene) {
-        delete currentScene;
-        currentScene = nullptr;
-    }
+    currentScene.reset(); // Automatically deletes the current scene
+
     switch (type) {
         case SceneType::Lobby:
-            // std::cout << "[DEBUG] Switching to Lobby scene" << std::endl;
-            currentScene = new LobbyScene(window, *this);
+            currentScene = std::make_unique<LobbyScene>(window, *this);
+            send_queue_.push(createPacket(Network::PacketType::GAME_END));
             break;
         case SceneType::Game:
-            // std::cout << "[DEBUG] Switching to Game scene" << std::endl;
-            // currentScene = std::make_unique<GameScene>(window, *this);
+            currentScene = std::make_unique<GameScene>(window, *this);
+            send_queue_.push(createPacket(Network::PacketType::GAME_START));
             break;
         default:
             std::cerr << "[ERROR] Unknown scene type" << std::endl;
@@ -68,16 +77,16 @@ void Client::send(const std::string& message)
 {
     socket_.async_send_to(
         boost::asio::buffer(message), server_endpoint_,
-        boost::bind(&Client::handle_send, this,
+        boost::bind(&Client::handleSend, this,
                     boost::asio::placeholders::error,
                     boost::asio::placeholders::bytes_transferred));
 }
 
-void Client::start_receive()
+void Client::startReceive()
 {
     socket_.async_receive_from(
         boost::asio::buffer(recv_buffer_), server_endpoint_,
-        boost::bind(&Client::handle_receive, this,
+        boost::bind(&Client::handleReceive, this,
                     boost::asio::placeholders::error,
                     boost::asio::placeholders::bytes_transferred));
 }
@@ -87,19 +96,19 @@ void Client::sendExitPacket()
     send(createPacket(Network::PacketType::DISCONNECTED));
 }
 
-void Client::start_send_timer() {
+void Client::startSendTimer() {
     send_timer_.expires_after(std::chrono::milliseconds(1));
-    send_timer_.async_wait(boost::bind(&Client::handle_send_timer, this, boost::asio::placeholders::error));
+    send_timer_.async_wait(boost::bind(&Client::handleSendTimer, this, boost::asio::placeholders::error));
 }
 
-void Client::handle_send_timer(const boost::system::error_code& error) {
+void Client::handleSendTimer(const boost::system::error_code& error) {
     if (!error) {
         if (!send_queue_.empty()) {
             std::string message = send_queue_.front();
             send_queue_.pop();
             send(message);
         }
-        start_send_timer();
+        startSendTimer();
     } else {
         std::cerr << "[ERROR] Timer error: " << error.message() << std::endl;
     }
@@ -108,11 +117,11 @@ void Client::handle_send_timer(const boost::system::error_code& error) {
 void Client::regulate_receive()
 {
     receive_timer_.expires_after(std::chrono::milliseconds(10)); // Set the interval to 10 milliseconds
-    receive_timer_.async_wait(boost::bind(&Client::start_receive, this));
+    receive_timer_.async_wait(boost::bind(&Client::startReceive, this));
 }
 
 // private Network Communication
-void Client::handle_receive(const boost::system::error_code& error, std::size_t bytes_transferred)
+void Client::handleReceive(const boost::system::error_code& error, std::size_t bytes_transferred)
 {
     std::lock_guard<std::mutex> lock(mutex_);
     if (!error || error == boost::asio::error::message_size) {
@@ -125,7 +134,7 @@ void Client::handle_receive(const boost::system::error_code& error, std::size_t 
     regulate_receive(); // Regulate the frequency of receive operations
 }
 
-void Client::handle_send(const boost::system::error_code& error, std::size_t bytes_transferred)
+void Client::handleSend(const boost::system::error_code& error, std::size_t bytes_transferred)
 {
     std::lock_guard<std::mutex> lock(mutex_);
     if (!error) {
@@ -199,10 +208,10 @@ void Client::parseMessage(std::string packet_data)
         new_x = std::stof(elements[1]);
         new_y = std::stof(elements[2]);
 
-        // std::cout << "[DEBUG] Action: " << action << std::endl;
-        // std::cout << "[DEBUG] Server ID: " << server_id << std::endl;
-        // std::cout << "[DEBUG] New X: " << new_x << std::endl;
-        // std::cout << "[DEBUG] New Y: " << new_y << std::endl;
+        std::cout << "[DEBUG] Action: " << action << std::endl;
+        std::cout << "[DEBUG] Server ID: " << server_id << std::endl;
+        std::cout << "[DEBUG] New X: " << new_x << std::endl;
+        std::cout << "[DEBUG] New Y: " << new_y << std::endl;
     } catch (const std::exception& e) {
         std::cerr << "[ERROR] Failed to parse packet data: " << e.what() << std::endl;
     }
@@ -258,7 +267,7 @@ int Client::clientLoop()
         currentScene->processEvents();
         currentScene->update();
         currentScene->render();
-
+        resetValues();
         mutex_.unlock();
     }
     sendExitPacket();

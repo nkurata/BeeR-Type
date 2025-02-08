@@ -8,6 +8,11 @@
 #ifndef CONTROLLABLE_H
     #define CONTROLLABLE_H
 
-struct Controllable {};
+struct Controllable {
+    bool moveUp = false;
+    bool moveDown = false;
+    bool moveLeft = false;
+    bool moveRight = false;
+};
 
 #endif // CONTROLLABLE_H

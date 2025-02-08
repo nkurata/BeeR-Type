@@ -17,6 +17,7 @@
 #include "SparseArray.hpp"
 #include "Entity.hpp"
 #include <tuple>
+#include <iostream>
 
 class Registry {
 public:

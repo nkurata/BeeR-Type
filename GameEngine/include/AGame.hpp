@@ -12,8 +12,8 @@
 #include "PlayerAction.hpp"
 #include "Server.hpp"
 #include <vector>
-
 #include <mutex>
+
 class AGame : public IGame {
 protected:
     std::vector<PlayerAction> playerActions_;
@@ -23,18 +23,13 @@ public:
     AGame(Server* server);
     virtual ~AGame();
     virtual void update() = 0;
+    virtual void run(int numPlayers) = 0;
 
-    // Registry functions for derived classes
-    virtual void registerComponents();
-
-    // Premade player action management functions
     void addPlayerAction(int playerId, int actionId) override;
     void deletePlayerAction() override;
     const std::vector<PlayerAction>& getPlayerActions() const override;
 
-    // Implement teh way to process the actions in derived class
-    virtual void processPlayerActions() = 0;
-
+    virtual void processPlayerActions() override = 0;
 };
 
 #endif // AGAME_HPP

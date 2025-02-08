@@ -2,18 +2,26 @@
 #include "Server.hpp"
 #include "Position.hpp"
 #include "Velocity.hpp"
-#include "Drawable.hpp"
 #include "Controllable.hpp"
 #include "Collidable.hpp"
 #include "Projectile.hpp"
+#include "PositionSystem.hpp"
+#include "CollisionSystem.hpp"
+#include "ProjectileSystem.hpp"
 #include <iostream>
 #include <thread>
 
 Game::Game(Server* server)
     : AGame(server), rng(std::random_device()()), distX(0.0f, 800.0f), distY(0.0f, 600.0f),
       distTime(1000, 5000), currentWave(0), enemiesPerWave(5), nextEnemyId(0), nextBossId(0), server_(server) {
-    registerComponents();
-    run(server->getClients().size());
+    registry.register_component<Position>();
+    registry.register_component<Velocity>();
+    registry.register_component<Controllable>();
+    registry.register_component<Collidable>();
+    registry.register_component<Projectile>();
+
+    registry.add_system<Position, Velocity>(positionSystem);
+    registry.add_system<Position, Velocity, Projectile, Collidable>(projectileSystem);
     }
 
 void Game::initializeplayers(int numPlayers) {
@@ -33,11 +41,11 @@ void Game::processPlayerActions() {
         int playerId = action.getId();
         int actionId = action.getActionId();
 
-        if (actionId > 39 && actionId < 48) { // Change by real action ID defined in server
+        if (actionId >= static_cast<int>(Network::PacketType::PLAYER_UP) && actionId <= static_cast<int>(Network::PacketType::PLAYER_STOP)) {
             handlePlayerMove(playerId, actionId);
             action.setProcessed(true);
             playerPacketFactory();
-        } else if (actionId == 5) { // Change by real action ID defined in server
+        } else if (actionId == static_cast<int>(Network::PacketType::PLAYER_SHOOT) || actionId == static_cast<int>(Network::PacketType::PLAYER_BLAST)) {
             action.setProcessed(true);
             bulletPacketFactory();
         }
@@ -49,57 +57,56 @@ void Game::processPlayerActions() {
 
 void Game::run(int numPlayers) {
     initializeplayers(numPlayers);
-    sf::RenderWindow window(sf::VideoMode(800, 600), "R-Type Game");
-    while (window.isOpen()) {
-        sf::Event event;
-        while (window.pollEvent(event)) {
-            if (event.type == sf::Event::Closed)
-                window.close();
-        }
-
+    while (true) {
         update();
-
-        window.clear();
-        window.display();
     }
 }
 
 void Game::handlePlayerMove(int playerId, int actionId) {
-    if (actionId > 34 && actionId < 39) {
-        //handleplayer movement
-    } else if (actionId > 38 && actionId < 43) {
-        //handleplayer stopping
+    auto entity = getEntityFromMap(playerId, "player");
+    auto& positionOpt = registry.get_components<Position>()[entity];
+    std::cout << "coucou est moi" << positionOpt.value().x << std::endl;
+    auto& controllableOpt = registry.get_components<Controllable>()[getEntityFromMap(playerId, "player")];
+    if (!controllableOpt.has_value()) {
+        throw std::runtime_error("Controllable component not found for entity");
     }
-}
+    Controllable* controllableComponent = &controllableOpt.value();
 
-//Registry functions
-void Game::registerComponents()
-{
-    registry.register_component<Position>();
-    registry.register_component<Velocity>();
-    registry.register_component<Drawable>();
-    registry.register_component<Controllable>();
-    registry.register_component<Collidable>();
-    registry.register_component<Projectile>();
+    if (actionId == static_cast<int>(Network::PacketType::PLAYER_UP)) {
+        controllableComponent->moveUp = true;
+    } else if (actionId == static_cast<int>(Network::PacketType::PLAYER_DOWN)) {
+        controllableComponent->moveDown = true;
+    } else if (actionId == static_cast<int>(Network::PacketType::PLAYER_LEFT)) {
+        controllableComponent->moveLeft = true;
+    } else if (actionId == static_cast<int>(Network::PacketType::PLAYER_RIGHT)) {
+        controllableComponent->moveRight = true;
+    } else if (actionId == static_cast<int>(Network::PacketType::PLAYER_STOP)) {
+        controllableComponent->moveUp = false;
+        controllableComponent->moveDown = false;
+        controllableComponent->moveLeft = false;
+        controllableComponent->moveRight = false;
+    }
 }
 
 
 // Player functions
 void Game::spawnPlayer(int playerId, float x, float y) {
-    players.emplace(playerId, Player(registry, x, y));
+    players.emplace(playerId, new Player(registry, x, y));
 
     std::string data = std::to_string(playerId) + ";" + std::to_string(x) + ";" + std::to_string(y);
     std::cout << "Player " << playerId << " spawned at: " << x << ", " << y << std::endl;
-    server_->Broadcast(server_->createPacket(Network::PacketType::CREATE_PLAYER, data));
+
+    auto packet = server_->createPacket(Network::PacketType::PLAYER_CREATE, data);
+    server_->Broadcast(packet);
 }
 
 void Game::killPlayers(int entityId) {
     for (auto it = players.begin(); it != players.end();) {
-        if (it->second.getEntity() == entityId) {
-            registry.kill_entity(it->second.getEntity());
+        if (it->second->getEntity() == entityId) {
+            registry.kill_entity(it->second->getEntity());
             it = players.erase(it);
             std::string data = std::to_string(entityId) + ";0;0";
-            server_->Broadcast(server_->createPacket(Network::PacketType::DELETE, data));
+            server_->Broadcast(server_->createPacket(Network::PacketType::KILL, data));
             break;
         } else {
             ++it;
@@ -109,11 +116,11 @@ void Game::killPlayers(int entityId) {
 
 // Enemy functions
 void Game::spawnEnemy(int enemyId, float x, float y) {
-    enemies.emplace(enemyId, Enemy(registry, x, y));
+    enemies.emplace(enemyId, new Enemy(registry, x, y));
 
     std::string data = std::to_string(enemyId) + ";" + std::to_string(x) + ";" + std::to_string(y);
     std::cout << "Enemy " << enemyId << " spawned at: " << x << ", " << y << std::endl;
-    server_->Broadcast(server_->createPacket(Network::PacketType::CREATE_ENEMY, data));
+    server_->Broadcast(server_->createPacket(Network::PacketType::ENEMY_CREATE, data));
 }
 
 // Bullet functions
@@ -129,20 +136,20 @@ void Game::spawnBullet(int playerId) {
     }
     const Velocity* velocityComponent = &velocityOpt.value();
 
-    bullets.emplace(nextBulletId++, Bullet(registry, positionComponent->x, positionComponent->y, velocityComponent->vx));
+    bullets.emplace(nextBulletId++, new Bullet(registry, positionComponent->x, positionComponent->y, velocityComponent->vx));
 
     std::string data = std::to_string(nextBulletId) + ";" + std::to_string(positionComponent->x) + ";" + std::to_string(positionComponent->y);
     std::cout << "Bullet " << nextBulletId << " spawned at: " << positionComponent->x << ", " << positionComponent->y << std::endl;
-    server_->Broadcast(server_->createPacket(Network::PacketType::CREATE_BULLET, data));
+    server_->Broadcast(server_->createPacket(Network::PacketType::BULLET_CREATE, data));
 }
 
 void Game::killBullets(int entityId) {
     for (auto it = bullets.begin(); it != bullets.end();) {
-        if (it->second.getEntity() == entityId) {
-            registry.kill_entity(it->second.getEntity());
+        if (it->second->getEntity() == entityId) {
+            registry.kill_entity(it->second->getEntity());
             it = bullets.erase(it);
             std::string data = std::to_string(entityId) + ";0;0";
-            server_->Broadcast(server_->createPacket(Network::PacketType::DELETE, data));
+            server_->Broadcast(server_->createPacket(Network::PacketType::KILL, data));
             break;
         } else {
             ++it;
@@ -152,20 +159,20 @@ void Game::killBullets(int entityId) {
 
 // Boss functions
 void Game::spawnBoss(int bossId, float x, float y) {
-    bosses.emplace(bossId, Boss(registry, x, y));
+    bosses.emplace(bossId, new Boss(registry, x, y));
 
     std::string data = std::to_string(bossId) + ";" + std::to_string(x) + ";" + std::to_string(y);
     std::cout << "Boss " << bossId << " spawned at: " << x << ", " << y << std::endl;
-    server_->Broadcast(server_->createPacket(Network::PacketType::CREATE_BOSS, data));
+    server_->Broadcast(server_->createPacket(Network::PacketType::BOSS_CREATE, data));
 }
 
 void Game::killBosses(int entityId) {
     for (auto it = bosses.begin(); it != bosses.end();) {
-        if (it->second.getEntity() == entityId) {
-            registry.kill_entity(it->second.getEntity());
+        if (it->second->getEntity() == entityId) {
+            registry.kill_entity(it->second->getEntity());
             it = bosses.erase(it);
             std::string data = std::to_string(entityId) + ";0;0";
-            server_->Broadcast(server_->createPacket(Network::PacketType::DELETE, data));
+            server_->Broadcast(server_->createPacket(Network::PacketType::KILL, data));
             break;
         } else {
             ++it;
@@ -309,13 +316,13 @@ void Game::bossPacketFactory() {
 
 Registry::Entity Game::getEntityFromMap(int mapId, std::string type) {
     if (type == "player") {
-        return players.at(mapId).getEntity();
+        return players.at(mapId)->getEntity();
     } else if (type == "enemy") {
-        return enemies.at(mapId).getEntity();
+        return enemies.at(mapId)->getEntity();
     } else if (type == "bullet") {
-        return bullets.at(mapId).getEntity();
+        return bullets.at(mapId)->getEntity();
     } else if (type == "boss") {
-        return bosses.at(mapId).getEntity();
+        return bosses.at(mapId)->getEntity();
     } else {
         throw std::invalid_argument("Invalid entity type");
     }

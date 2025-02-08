@@ -15,7 +15,6 @@ Bullet::Bullet(Registry& registry, float x, float y, float speed) : registry(reg
     entity = registry.spawn_entity();
     registry.add_component<Position>(entity, {x, y});
     registry.add_component<Projectile>(entity, {speed});
-    registry.add_component<Drawable>(entity, {sf::RectangleShape(sf::Vector2f(5.0f, 5.0f))});
 }
 
 Bullet::~Bullet() {

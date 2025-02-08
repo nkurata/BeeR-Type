@@ -19,7 +19,7 @@ include_directories(
 # Network sources
 set(NETWORK_SOURCES
     src/PacketHandler.cpp
-)
+    )
 
 set(NETWORK_HEADERS
     include/PacketHandler.hpp
@@ -27,6 +27,7 @@ set(NETWORK_HEADERS
     include/Packet.hpp
     include/PacketType.hpp
     include/ThreadSafeQueue.hpp
+    include/GameLoader.hpp
 )
 
 # Create Network library
@@ -39,4 +40,5 @@ target_include_directories(Network PUBLIC include)
 target_link_libraries(Network
     Boost::Boost
     SFML::SFML
+    R-Type
 )

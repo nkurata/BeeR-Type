@@ -31,7 +31,7 @@ class Server {
     public:
         Server(boost::asio::io_context& io_context, short port, ThreadSafeQueue<Network::Packet>& packetQueue);
         ~Server();
-        void handle_receive(const boost::system::error_code& error, std::size_t bytes_transferred);
+        void handleReceive(const boost::system::error_code& error, std::size_t bytes_transferred);
         void send_to_client(const std::string& message, const boost::asio::ip::udp::endpoint& client_endpoint);
 
         // void setGameState(GameState* game);
@@ -55,10 +55,10 @@ class Server {
         // void loadRtypeGame();
     private:
         using PacketHandler = std::function<void(const std::vector<std::string>&)>;
-        void start_receive();
+        void startReceive();
         uint32_t createClient(boost::asio::ip::udp::endpoint& client_endpoint);
-        void start_send_timer();
-        void handle_send_timer(const boost::system::error_code& error);
+        void startSendTimer();
+        void handleSendTimer(const boost::system::error_code& error);
         void regulate_receive();
 
         udp::socket socket_;
@@ -71,9 +71,6 @@ class Server {
         boost::asio::steady_timer send_timer_;
         boost::asio::steady_timer receive_timer_;
         std::queue<uint32_t> available_ids_;
-
-        // void *RtypeGame;
-        // RType::GameState* (*createRtypeGame)(RType::Server* server);
 
 };
 

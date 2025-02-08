@@ -8,11 +8,12 @@ public:
     Player(Registry& registry, float x, float y);
     ~Player();
 
-    void move(float x, float y);
+    void move(float vx, float vy);
+    void stop();
+
     Registry::Entity getEntity() const;
 
     std::pair<float, float> getVelocity() const;
-    void setVelocity(float x, float y);
 
     int getHealth() const;
 

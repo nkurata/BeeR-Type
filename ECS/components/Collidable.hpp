@@ -8,10 +8,14 @@
 #ifndef COLLIDABLE_H_
     #define COLLIDABLE_H_
 
-    struct Collidable {
-        Collidable(bool is_collidable = true) : is_collidable(is_collidable) {}
-        bool is_collidable;
+    struct Hitbox {
+        float width;
+        float height;
     };
 
+    struct Collidable {
+        bool is_collidable = true;
+        Hitbox hitbox;
+    };
 
 #endif /* !COLLIDABLE_H_ */

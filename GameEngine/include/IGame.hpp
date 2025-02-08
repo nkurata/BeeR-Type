@@ -17,9 +17,7 @@ class IGame {
 public:
     virtual ~IGame() = default;
     virtual void update() = 0;
-
-    // Registry functions
-    virtual void registerComponents();
+    virtual void run(int numPlayers) = 0;
 
     // Functions for managing player actions
     virtual void addPlayerAction(int playerId, int actionId) = 0;
@@ -27,5 +25,4 @@ public:
     virtual void deletePlayerAction() = 0;
     virtual const std::vector<PlayerAction>& getPlayerActions() const = 0;
 };
-
 #endif // IGAME_HPP

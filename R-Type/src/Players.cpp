@@ -17,8 +17,7 @@ Player::Player(Registry& registry, float x, float y) : registry(registry) {
     entity = registry.spawn_entity();
     registry.add_component<Position>(entity, {x, y});
     registry.add_component<Velocity>(entity, {0.0f, 0.0f});
-    registry.add_component<Drawable>(entity, {});
-    registry.add_component<Controllable>(entity, {});
+    registry.add_component<Controllable>(entity, {false, false, false, false});
     registry.add_component<Collidable>(entity, {true});
     health = 100;
 }
@@ -27,13 +26,28 @@ Player::~Player() {
 	registry.kill_entity(entity);
 }
 
-void Player::move(float x, float y) {
+void Player::move(float vx, float vy) {
     auto& pos = registry.get_components<Position>()[entity];
+    auto& vel = registry.get_components<Velocity>()[entity];
     if (!pos) {
         std::cerr << "Error: Player entity does not have a Position component." << std::endl;
+    } else if (!vel) {
+        std::cerr << "Error: Player entity does not have a Velocity component." << std::endl;
     } else {
-        pos->y += y;
-        pos->x += x;
+        vel->vx = vx;
+        vel->vy = vy;
+        pos->x += vel->vx;
+        pos->y += vel->vy;
+    }
+}
+
+void Player::stop() {
+    auto& vel = registry.get_components<Velocity>()[entity];
+    if (!vel) {
+        std::cerr << "Error: Player entity does not have a Velocity component." << std::endl;
+    } else {
+        vel->vx = 0.0f;
+        vel->vy = 0.0f;
     }
 }
 

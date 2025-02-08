@@ -13,11 +13,11 @@
 class Game : public AGame {
 public:
     Game(Server* server);
+    ~Game() override = default;
+    void update() override;
 
-    void registerComponents() override;
     void processPlayerActions() override;
     void initializeplayers(int numPlayers);
-    void update() override;
     void handlePlayerMove(int playerId, int actionId);
     void run(int numPlayers);
 
@@ -55,10 +55,10 @@ public:
 
 private:
 
-    std::unordered_map<int, Player> players;
-    std::unordered_map<int, Enemy> enemies;
-    std::unordered_map<int, Bullet> bullets;
-    std::unordered_map<int, Boss> bosses;
+    std::unordered_map<int, Player*> players;
+    std::unordered_map<int, Enemy*> enemies;
+    std::unordered_map<int, Bullet*> bullets;
+    std::unordered_map<int, Boss*> bosses;
 
     Server* server_;
     Registry registry;
@@ -71,6 +71,7 @@ private:
     std::chrono::steady_clock::time_point lastSpawnTime;
     int nextEnemyId;
     int nextBossId;
+    int nextBulletId;
 };
 
 #endif // GAME_HPP

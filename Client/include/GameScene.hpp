@@ -4,40 +4,45 @@
 #include "Scene.hpp"
 #include "Sprite.hpp"
 #include "Client.hpp"
+#include "Registry.hpp"
+#include "PositionSystem.hpp"
+#include "ProjectileSystem.hpp"
+#include "DrawSystem.hpp"
+#include "RTYPEPlayer.hpp"
+#include "RTYPEEnemy.hpp"
+#include "RTYPEBoss.hpp"
+#include "RTYPEBullet.hpp"
 #include <unordered_map>
 #include <vector>
 #include <SFML/Graphics.hpp>
 #include <SFML/Audio.hpp>
+#include <memory>
 
 class GameScene : public Scene {
 public:
     GameScene(sf::RenderWindow& window, Client& client);
-    ~GameScene(); // Add destructor
+    ~GameScene();
+    void run(sf::RenderWindow& window, Client& client);
     void processEvents() override;
     void update() override;
     void render() override;
 
 private:
-    void loadAssets();
-    void initGameSprites();
-    void createSprite(int action, int server_id, float new_x, float new_y);
-    void adjustVolume(float change);
-    void LoadSound();
+    void createSprite();
+    void initBackground();
     void handleKeyPress(sf::Keyboard::Key key);
     void handleKeyUnpress(sf::Keyboard::Key key);
+    void processPlayerActions();
 
-    std::unordered_map<int, SpriteElement> players_;
-    std::unordered_map<int, SpriteElement> enemies_;
-    std::unordered_map<int, SpriteElement> bullets_;
-    std::unordered_map<int, SpriteElement> bosses_;
-    std::unordered_map<int, SpriteElement> gameElements_;
-    std::unordered_map<SpriteType, sf::Texture> textures_;
+    std::unordered_map<int, std::unique_ptr<Player>> players_;
+    std::unordered_map<int, std::unique_ptr<Enemy>> enemies_;
+    std::unordered_map<int, std::unique_ptr<Boss>> bosses_;
+    Registry registry_;
+    sf::Sprite backgroundSprite;
+    sf::Texture backgroundTexture;
     std::vector<sf::Text> gameTexts_;
-
-    sf::SoundBuffer buffer_background_;
-    sf::SoundBuffer buffer_shoot_;
-    sf::Sound sound_background_;
-    sf::Sound sound_shoot_;
+    sf::RenderWindow& window_;
+    Client& client_;
 };
 
 #endif // GAME_SCENE_HPP

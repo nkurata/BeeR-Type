@@ -7,23 +7,20 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 add_definitions(-DBOOST_BIND_GLOBAL_PLACEHOLDERS)
 
-# Local includes
-# include_directories(
-#     ${CMAKE_SOURCE_DIR}/Server/include
-#     ${CMAKE_SOURCE_DIR}/Network/include
-#     ${CMAKE_SOURCE_DIR}/GameEngine/include
-#     ${CMAKE_SOURCE_DIR}/BeeR-Type/include
-#     ${CMAKE_SOURCE_DIR}/include
-#     ${CMAKE_SOURCE_DIR}/ECS
-#     ${CMAKE_SOURCE_DIR}/ECS/systems
-#     ${CMAKE_SOURCE_DIR}/ECS/components
-# )
+include_directories(
+    ${CMAKE_SOURCE_DIR}/Server/include
+    ${CMAKE_SOURCE_DIR}/Network/include
+    ${CMAKE_SOURCE_DIR}/GameEngine/include
+    ${CMAKE_SOURCE_DIR}/BeeR-Type/include
+    ${CMAKE_SOURCE_DIR}/include
+    ${CMAKE_SOURCE_DIR}/ECS
+    ${CMAKE_SOURCE_DIR}/ECS/systems
+    ${CMAKE_SOURCE_DIR}/ECS/components
+)
 
 # The Server library sources
 set(SERVER_SOURCES
     src/Server.cpp
-    include/Server.hpp
-    include/ClientRegister.hpp
     Errors/Throws.hpp
 )
 
@@ -35,5 +32,4 @@ target_link_libraries(Server
     ECS
     Network
     GameEngine
-    R-Type
 )

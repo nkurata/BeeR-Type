@@ -12,21 +12,19 @@
 #include <algorithm>
 #include <iostream>
 
-
 AGame::AGame(Server* server) : server_(server) {}
 
-AGame::~AGame()
-{
+AGame::~AGame() {
     playerActions_.clear();
 }
 
 void AGame::addPlayerAction(int playerId, int actionId) {
-    std::cout << "Player " << playerId << " performed action " << actionId << std::endl;
+    std::cout << "Player " << playerId << " performed action " << static_cast<int>(actionId) << std::endl;
     std::lock_guard<std::mutex> lock(playerActionsMutex_);
     playerActions_.emplace_back(playerId, actionId);
 }
 
-void AGame::deletePlayerAction() { //deletes all process elements from the vector of player actions and resizes vector
+void AGame::deletePlayerAction() {
     playerActions_.erase(
         std::remove_if(playerActions_.begin(), playerActions_.end(),
             [](const PlayerAction& action) { return action.getProcessed(); }),

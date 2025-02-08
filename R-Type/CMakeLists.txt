@@ -21,11 +21,13 @@ set(RTYPE_SOURCES
     src/Game.cpp
 )
 
-add_library(R-Type SHARED ${RTYPE_SOURCES})
+add_library(R-Type ${RTYPE_SOURCES})
 
 target_link_libraries(R-Type
+    Boost::Boost
+    SFML::SFML
     ECS
     GameEngine
 )
 
-set_target_properties(R-Type PROPERTIES PREFIX "" SUFFIX ".so" LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/lib)
+# set_target_properties(R-Type PROPERTIES PREFIX "" SUFFIX ".so" LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/lib)

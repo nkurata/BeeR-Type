@@ -12,10 +12,11 @@
 #include "Position.hpp"
 #include "Velocity.hpp"
 
-inline void position_system(Registry& registry, sparse_array<Position>& positions, sparse_array<Velocity>& velocities) {
+inline void positionSystem(Registry& registry, sparse_array<Position>& positions, sparse_array<Velocity>& velocities) {
     for (size_t i = 0; i < positions.size() && i < velocities.size(); ++i) {
-        auto& pos = positions[i];
-        auto& vel = velocities[i];
+        auto pos = positions[i];
+        auto vel = velocities[i];
+
         if (pos && vel) {
             pos->x += vel->vx;
             pos->y += vel->vy;

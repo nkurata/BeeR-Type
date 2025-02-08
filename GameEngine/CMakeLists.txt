@@ -24,7 +24,6 @@ set(GAMEENGINE_SOURCES
 
 add_library(GameEngine ${GAMEENGINE_SOURCES})
 
-# Link against Boost::Boost, SFML::SFML, ECSLib if needed
 target_link_libraries(GameEngine
     Boost::Boost
     SFML::SFML

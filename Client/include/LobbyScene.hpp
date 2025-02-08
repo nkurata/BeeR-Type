@@ -9,10 +9,10 @@
 class LobbyScene : public Scene {
 public:
     LobbyScene(sf::RenderWindow& window, Client& client);
+    ~LobbyScene();
     void processEvents() override;
     void update() override;
     void render() override;
-
 
 private:
     void loadAssets();
