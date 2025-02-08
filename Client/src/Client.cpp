@@ -49,18 +49,14 @@ void Client::resetValues()
 }
 
 void Client::switchScene(SceneType type) {
-    currentScene.reset(); // Automatically deletes the current scene
+    currentScene.reset();
 
     switch (type) {
         case SceneType::Lobby:
             currentScene = std::make_unique<LobbyScene>(window, *this);
-            send_queue_.push(createPacket(Network::PacketType::GAME_END));
             break;
         case SceneType::Game:
-            std::cout << "[DEBUG] Switching to GameScene" << std::endl;
-            send_queue_.push(createPacket(Network::PacketType::GAME_START));
             currentScene = std::make_unique<GameScene>(window, *this);
-            std::cout << "[DEBUG] GameScene created" << std::endl;
             break;
         default:
             std::cerr << "[ERROR] Unknown scene type" << std::endl;
@@ -144,7 +140,7 @@ void Client::handleReceive(const boost::system::error_code& error, std::size_t b
 void Client::handleSend(const boost::system::error_code& error, std::size_t bytes_transferred)
 {
     if (!error) {
-        std::cout << "[DEBUG] Sent " << bytes_transferred << " bytes" << std::endl;
+        // std::cout << "[DEBUG] Sent " << bytes_transferred << " bytes" << std::endl;
     } else {
         packetLost++;
         std::cerr << "[ERROR] Error sending: " << error.message() << std::endl;
@@ -177,11 +173,17 @@ std::string Client::createMousePacket(Network::PacketType type, int x, int y)
     return packet_str.str();
 }
 
-std::string deserializePacket(const std::string& packet_str)
+std::vector<std::string> deserializePacket(const std::string packet_str)
 {
-    Network::Packet packet;
-    packet.type = static_cast<Network::PacketType>(packet_str[0]);
-    return packet_str;
+    std::vector<std::string> elements;
+    std::stringstream ss(packet_str);
+    std::string segment;
+
+    while (std::getline(ss, segment, ';')) {
+        elements.push_back(segment);
+    }
+
+    return elements;
 }
 
 void Client::parseMessage(std::string packet_data)
@@ -191,29 +193,22 @@ void Client::parseMessage(std::string packet_data)
         return;
     }
     uint8_t packet_type = static_cast<uint8_t>(packet_data[0]);
-    std::string packet_inside = packet_data.substr(2);
+    
+    std::vector<std::string> elements = deserializePacket(packet_data.substr(2));
+    if (elements.empty()) {
+        std::cerr << "[ERROR] Failed to parse packet data." << std::endl;
+        return;
+    }
 
     if (packet_type == static_cast<uint8_t>(Network::PacketType::HEARTBEAT)) {
-        handleHeartbeatMessage(packet_inside);
+        handleHeartbeatMessage(elements);
         return;
-    } if (packet_type == static_cast<uint8_t>(Network::PacketType::GAME_START)) {
-        switchScene(SceneType::Game);
-        return;
-    } if (packet_type == static_cast<uint8_t>(Network::PacketType::GAME_END)) {
-        switchScene(SceneType::Lobby);
+    }
+    if (elements.size() < 3) {
+        std::cerr << "[ERROR] Invalid packet data." << std::endl;
         return;
     }
 
-    std::vector<std::string> elements;
-    std::stringstream ss(packet_inside);
-    std::string segment;
-    while (std::getline(ss, segment, ';')) {
-        elements.push_back(segment);
-    }
-    if (elements.size() != 3) {
-        std::cerr << "[ERROR] Invalid packet format: " << packet_inside << std::endl;
-        return;
-    }
     try {
         action = static_cast<int>(packet_type);
         server_id = std::stoi(elements[0]);
@@ -242,14 +237,7 @@ void Client::sendHeartbeatMessage()
     }
 }
 
-void Client::handleHeartbeatMessage(const std::string& data) {
-    std::vector<std::string> elements;
-    std::stringstream ss(data);
-    std::string segment;
-    while (std::getline(ss, segment, ';')) {
-        elements.push_back(segment);
-    }
-
+void Client::handleHeartbeatMessage(std::vector<std::string> elements) {
     if (elements.size() > 0) {
         int newNumClients = std::stoi(elements[0]);
         if (newNumClients > numClients_) {
@@ -275,19 +263,13 @@ int Client::clientLoop()
     send_queue_.push(createPacket(Network::PacketType::REQCONNECT));
 
     while (this->window.isOpen()) {
-        std::cout << "[DEBUG] Client loop running" << std::endl;
-        currentScene->processEvents();
-        std::cout << "[DEBUG] Events processed" << std::endl;
-        currentScene->update();
-        std::cout << "[DEBUG] Scene updated" << std::endl;
-        currentScene->render();
-        std::cout << "[DEBUG] Scene rendered" << std::endl;
-        resetValues();
-        std::cout << "[DEBUG] Values reset" << std::endl;
-        sendHeartbeatMessage();
-        std::cout << "[DEBUG] Heartbeat message sent" << std::endl;
-        mutex_.unlock();
-        std::cout << "[DEBUG] Mutex unlocked" << std::endl;
+        if (currentScene) {
+            currentScene->processEvents();
+            currentScene->update();
+            currentScene->render();
+            sendHeartbeatMessage();
+            mutex_.unlock();
+        }
     }
     sendExitPacket();
     return 0;

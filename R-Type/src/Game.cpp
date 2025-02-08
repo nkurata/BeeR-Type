@@ -24,12 +24,6 @@ Game::Game(Server* server)
     registry.add_system<Position, Velocity, Projectile, Collidable>(projectileSystem);
     }
 
-void Game::initializeplayers(int numPlayers) {
-    for (int i = 0; i < numPlayers; ++i) {
-        spawnPlayer(i, 100.0f * (i + 1.0f), 100.0f);
-    }
-}
-
 void Game::update() {
     registry.run_systems();
     processPlayerActions();
@@ -56,7 +50,6 @@ void Game::processPlayerActions() {
 }
 
 void Game::run(int numPlayers) {
-    initializeplayers(numPlayers);
     while (true) {
         update();
     }

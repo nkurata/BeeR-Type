@@ -14,16 +14,10 @@ GameScene::GameScene(sf::RenderWindow& window, Client& client)
 
     // Register systems
     initBackground();
-    std::cout << "[DEBUG] background initialised" << std::endl;
     registry_.register_component<Position>();
-    std::cout << "[DEBUG] Position registered" << std::endl;
     registry_.register_component<Velocity>();
-    std::cout << "[DEBUG] Velocity registered" << std::endl;
     registry_.register_component<Drawable>();
-    std::cout << "[DEBUG] Drawable registered" << std::endl;
     registry_.add_system<Position, Velocity>(positionSystem);
-    std::cout << "[DEBUG] Position system added" << std::endl;
-    std::cout << "[DEBUG] GameScene constructor finished" << std::endl;
 }
 
 GameScene::~GameScene() {}
@@ -36,10 +30,6 @@ void GameScene::initBackground() {
         std::cerr << "[ERROR] Failed to load background texture" << std::endl;
     }
     backgroundSprite.setTexture(backgroundTexture);
-
-    float scaleX = static_cast<float>(window.getSize().x) / backgroundTexture.getSize().x;
-    float scaleY = static_cast<float>(window.getSize().y) / backgroundTexture.getSize().y;
-    backgroundSprite.setScale(scaleX, scaleY);
     std::cout << "[DEBUG] Game sprites initialized" << std::endl;
 }
 
@@ -140,8 +130,40 @@ void GameScene::handleKeyUnpress(sf::Keyboard::Key key)
     }
 }
 
+void GameScene::handleServerActions() {
+    switch (client.action) {
+        case static_cast<int>(Network::PacketType::PLAYER_UP):
+            players_[client.server_id]->moveUp();
+            break;
+        case static_cast<int>(Network::PacketType::PLAYER_DOWN):
+            players_[client.server_id]->moveDown();
+            break;
+        case static_cast<int>(Network::PacketType::PLAYER_LEFT):
+            players_[client.server_id]->moveLeft();
+            break;
+        case static_cast<int>(Network::PacketType::PLAYER_RIGHT):
+            players_[client.server_id]->moveRight();
+            break;
+        case static_cast<int>(Network::PacketType::PLAYER_STOP):
+            players_[client.server_id]->stop();
+            break;
+        case static_cast<int>(Network::PacketType::PLAYER_SHOOT):
+            players_[client.server_id]->playerShoot();
+            break;
+        case static_cast<int>(Network::PacketType::PLAYER_BLAST):
+            players_[client.server_id]->playerBlast();
+            break;
+        case static_cast<int>(Network::PacketType::GAME_END):
+            client.switchScene(SceneType::Lobby);
+            break;
+        default:
+            break;
+    }
+}
+
 void GameScene::update() {
     createSprite();
+    handleServerActions();
     registry_.run_systems();
 }
 
@@ -158,34 +180,34 @@ void GameScene::render() {
         }
     }
 
-    // Draw enemies
-    for (const auto& [id, enemy] : enemies_) {
-        auto& drawableOpt = registry_.get_components<Drawable>()[enemy->getEntity()];
-        if (drawableOpt.has_value()) {
-            auto& drawable = drawableOpt.value();
-            window.draw(drawable.sprite);
-        }
-    }
+    // // Draw enemies
+    // for (const auto& [id, enemy] : enemies_) {
+    //     auto& drawableOpt = registry_.get_components<Drawable>()[enemy->getEntity()];
+    //     if (drawableOpt.has_value()) {
+    //         auto& drawable = drawableOpt.value();
+    //         window.draw(drawable.sprite);
+    //     }
+    // }
 
-    // Draw bosses
-    for (const auto& [id, boss] : bosses_) {
-        auto& drawableOpt = registry_.get_components<Drawable>()[boss->getEntity()];
-        if (drawableOpt.has_value()) {
-            auto& drawable = drawableOpt.value();
-            window.draw(drawable.sprite);
-        }
-    }
+    // // Draw bosses
+    // for (const auto& [id, boss] : bosses_) {
+    //     auto& drawableOpt = registry_.get_components<Drawable>()[boss->getEntity()];
+    //     if (drawableOpt.has_value()) {
+    //         auto& drawable = drawableOpt.value();
+    //         window.draw(drawable.sprite);
+    //     }
+    // }
 
-    // Draw bullets
-    for (const auto& [id, player] : players_) {
-        for (const auto& bullet : player->getBullets()) {
-            auto& drawableOpt = registry_.get_components<Drawable>()[bullet->getEntity()];
-            if (drawableOpt.has_value()) {
-                auto& drawable = drawableOpt.value();
-                window.draw(drawable.sprite);
-            }
-        }
-    }
+    // // Draw bullets
+    // for (const auto& [id, player] : players_) {
+    //     for (const auto& bullet : player->getBullets()) {
+    //         auto& drawableOpt = registry_.get_components<Drawable>()[bullet->getEntity()];
+    //         if (drawableOpt.has_value()) {
+    //             auto& drawable = drawableOpt.value();
+    //             window.draw(drawable.sprite);
+    //         }
+    //     }
+    // }
 
     window.display();
 }

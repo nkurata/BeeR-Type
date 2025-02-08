@@ -32,7 +32,7 @@ private:
     void initBackground();
     void handleKeyPress(sf::Keyboard::Key key);
     void handleKeyUnpress(sf::Keyboard::Key key);
-    void processPlayerActions();
+    void handleServerActions();
 
     std::unordered_map<int, std::unique_ptr<Player>> players_;
     std::unordered_map<int, std::unique_ptr<Enemy>> enemies_;

@@ -13,6 +13,7 @@ public:
     void processEvents() override;
     void update() override;
     void render() override;
+    void handleServerActions();
 
 private:
     void loadAssets();

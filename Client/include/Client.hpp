@@ -20,6 +20,7 @@
 #include <boost/asio/steady_timer.hpp>
 #include <queue>
 #include <chrono>
+#include <vector>
 
 
 #define MAX_LENGTH 1024
@@ -43,7 +44,7 @@ class Client {
         std::string createPacket(Network::PacketType type);
         std::string createMousePacket(Network::PacketType type, int x = 0, int y = 0);
         void parseMessage(std::string packet_data);
-        void handleHeartbeatMessage(const std::string& data);
+        void handleHeartbeatMessage(std::vector<std::string> elements);
         void resetValues();
         //Getters
         int getNumClients();

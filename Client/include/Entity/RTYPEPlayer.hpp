@@ -44,23 +44,38 @@ public:
         bullets_.emplace_back(new Bullet(registry, playerPosition->x, playerPosition->y, 0.5f));
     }
 
-    void renderPlayer(sf::RenderWindow& window) {
-        auto& positionOpt = registry.get_components<Position>()[entity];
-        if (!positionOpt.has_value()) {
+    void playerBlast () {
+        auto &playerPosition = registry.get_components<Position>()[entity];
+        if (!playerPosition.has_value()) {
             throw std::runtime_error("Position component not found for entity");
         }
-        auto& drawableOpt = registry.get_components<Drawable>()[entity];
-        if (!drawableOpt.has_value()) {
-            throw std::runtime_error("Drawable component not found for entity");
-        }
-        auto& positionComponent = positionOpt.value();
-        auto& drawableComponent = drawableOpt.value();
-        drawableComponent.sprite.setPosition(positionComponent.x, positionComponent.y);
-        window.draw(drawableComponent.sprite);
+        bullets_.emplace_back(new Bullet(registry, playerPosition->x, playerPosition->y, 0.5f));
+        bullets_.emplace_back(new Bullet(registry, playerPosition->x, playerPosition->y, 0.5f));
+        bullets_.emplace_back(new Bullet(registry, playerPosition->x, playerPosition->y, 0.5f));
     }
 
     const std::vector<Bullet*>& getBullets() const {
         return bullets_;
+    }
+
+    void moveUp () {
+        changeVelocity(0.0f, -0.1f);
+    }
+
+    void moveDown () {
+        changeVelocity(0.0f, 0.1f);
+    }
+
+    void moveLeft () {
+        changeVelocity(-0.1f, 0.0f);
+    }
+
+    void moveRight () {
+        changeVelocity(0.1f, 0.0f);
+    }
+
+    void stop() {
+        changeVelocity(0.0f, 0.0f);
     }
 
 private:

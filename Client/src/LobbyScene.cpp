@@ -82,11 +82,9 @@ void LobbyScene::processEvents() {
         } else if (event.type == sf::Event::MouseButtonPressed) {
             sf::Vector2i mousePos = sf::Mouse::getPosition(window);
             if (buttons_.find(-101) != buttons_.end() && buttons_[-101].sprite.getGlobalBounds().contains(mousePos.x, mousePos.y)) {
-                std::cout << "Game starting..." << std::endl;
                 client.send_queue_.push(client.createPacket(Network::PacketType::GAME_START));
                 buttons_.erase(-101);
             } if (buttons_.find(-102) != buttons_.end() && buttons_[-102].sprite.getGlobalBounds().contains(mousePos.x, mousePos.y)) {
-                std::cout << "Game starting..." << std::endl;
                 client.send_queue_.push(client.createPacket(Network::PacketType::GAME_START));
                 buttons_.erase(-102);
             }
@@ -94,10 +92,20 @@ void LobbyScene::processEvents() {
     }
 }
 
+void LobbyScene::handleServerActions() {
+    switch (client.action) {
+        case static_cast<int>(Network::PacketType::GAME_START):
+            std::cout<<"Switching to GameScene"<<std::endl;
+            client.switchScene(SceneType::Game);
+            break;
+    }
+}
+
 void LobbyScene::update() {
     numClients_ = client.getNumClients();
     updatePing(); // Update the ping text
     initLobbySprites();
+    handleServerActions();
 }
 
 void LobbyScene::render() {
