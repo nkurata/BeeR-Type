@@ -7,7 +7,12 @@
 using boost::asio::ip::udp;
 
 Client::Client(boost::asio::io_context &io_context, const std::string &host, short server_port, short client_port)
-    : socket_(io_context, udp::endpoint(udp::v4(), client_port)), io_context_(io_context), window(sf::VideoMode(1280, 720), "R-Type Client"), send_timer_(io_context), receive_timer_(io_context), currentScene(nullptr), lastHeartbeatTime_(std::chrono::high_resolution_clock::now())
+    : socket_(io_context, udp::endpoint(udp::v4(), client_port)),
+    io_context_(io_context), window(sf::VideoMode(1280, 720), "R-Type Client"),
+    send_timer_(io_context),
+    receive_timer_(io_context),
+    currentScene(nullptr),
+    lastHeartbeatTime_(std::chrono::high_resolution_clock::now())
 {
     // std::cout << "[DEBUG] Client constructor called" << std::endl;
     udp::resolver resolver(io_context);
@@ -15,7 +20,7 @@ Client::Client(boost::asio::io_context &io_context, const std::string &host, sho
     server_endpoint_ = *resolver.resolve(query).begin();
     std::cout << "Connected to " << host << ":" << server_port << " from client port " << client_port << std::endl;
 
-    regulate_receive(); // Start the regulated receive
+    startReceive(); // Start the regulated receive
     startSendTimer(); // Start the send timer
     receive_thread_ = std::thread(&Client::run_receive, this);
     // std::cout << "[DEBUG] Client constructor finished" << std::endl;
@@ -27,10 +32,10 @@ Client::~Client()
 {
     // std::cout << "[DEBUG] Client destructor called" << std::endl;
     io_context_.stop();
+    socket_.close();
     if (receive_thread_.joinable()) {
         receive_thread_.join();
     }
-    socket_.close();
     currentScene.reset();
     // std::cout << "[DEBUG] Client destructor finished" << std::endl;
 }
@@ -43,8 +48,6 @@ void Client::resetValues()
     new_y = 0.0;
 }
 
-#include "Client.hpp"
-
 void Client::switchScene(SceneType type) {
     currentScene.reset(); // Automatically deletes the current scene
 
@@ -54,8 +57,10 @@ void Client::switchScene(SceneType type) {
             send_queue_.push(createPacket(Network::PacketType::GAME_END));
             break;
         case SceneType::Game:
-            currentScene = std::make_unique<GameScene>(window, *this);
+            std::cout << "[DEBUG] Switching to GameScene" << std::endl;
             send_queue_.push(createPacket(Network::PacketType::GAME_START));
+            currentScene = std::make_unique<GameScene>(window, *this);
+            std::cout << "[DEBUG] GameScene created" << std::endl;
             break;
         default:
             std::cerr << "[ERROR] Unknown scene type" << std::endl;
@@ -75,6 +80,7 @@ int Client::getNumClients() {
 // Network Communication
 void Client::send(const std::string& message)
 {
+    packetSent++;
     socket_.async_send_to(
         boost::asio::buffer(message), server_endpoint_,
         boost::bind(&Client::handleSend, this,
@@ -123,22 +129,22 @@ void Client::regulate_receive()
 // private Network Communication
 void Client::handleReceive(const boost::system::error_code& error, std::size_t bytes_transferred)
 {
-    std::lock_guard<std::mutex> lock(mutex_);
     if (!error || error == boost::asio::error::message_size) {
+        mutex_.lock();
         packetReceived++;
         received_data.assign(recv_buffer_.data(), bytes_transferred);
         parseMessage(received_data);
+        startReceive();
     } else {
         std::cerr << "[ERROR] Error receiving: " << error.message() << std::endl;
+        startReceive();
     }
-    regulate_receive(); // Regulate the frequency of receive operations
 }
 
 void Client::handleSend(const boost::system::error_code& error, std::size_t bytes_transferred)
 {
-    std::lock_guard<std::mutex> lock(mutex_);
     if (!error) {
-        packetSent++;
+        std::cout << "[DEBUG] Sent " << bytes_transferred << " bytes" << std::endl;
     } else {
         packetLost++;
         std::cerr << "[ERROR] Error sending: " << error.message() << std::endl;
@@ -189,6 +195,12 @@ void Client::parseMessage(std::string packet_data)
 
     if (packet_type == static_cast<uint8_t>(Network::PacketType::HEARTBEAT)) {
         handleHeartbeatMessage(packet_inside);
+        return;
+    } if (packet_type == static_cast<uint8_t>(Network::PacketType::GAME_START)) {
+        switchScene(SceneType::Game);
+        return;
+    } if (packet_type == static_cast<uint8_t>(Network::PacketType::GAME_END)) {
+        switchScene(SceneType::Lobby);
         return;
     }
 
@@ -260,15 +272,22 @@ void Client::handleHeartbeatMessage(const std::string& data) {
 
 int Client::clientLoop()
 {
-    send(createPacket(Network::PacketType::REQCONNECT));
+    send_queue_.push(createPacket(Network::PacketType::REQCONNECT));
 
     while (this->window.isOpen()) {
-        sendHeartbeatMessage();
+        std::cout << "[DEBUG] Client loop running" << std::endl;
         currentScene->processEvents();
+        std::cout << "[DEBUG] Events processed" << std::endl;
         currentScene->update();
+        std::cout << "[DEBUG] Scene updated" << std::endl;
         currentScene->render();
+        std::cout << "[DEBUG] Scene rendered" << std::endl;
         resetValues();
+        std::cout << "[DEBUG] Values reset" << std::endl;
+        sendHeartbeatMessage();
+        std::cout << "[DEBUG] Heartbeat message sent" << std::endl;
         mutex_.unlock();
+        std::cout << "[DEBUG] Mutex unlocked" << std::endl;
     }
     sendExitPacket();
     return 0;

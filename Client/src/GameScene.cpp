@@ -14,10 +14,15 @@ GameScene::GameScene(sf::RenderWindow& window, Client& client)
 
     // Register systems
     initBackground();
+    std::cout << "[DEBUG] background initialised" << std::endl;
     registry_.register_component<Position>();
+    std::cout << "[DEBUG] Position registered" << std::endl;
     registry_.register_component<Velocity>();
+    std::cout << "[DEBUG] Velocity registered" << std::endl;
     registry_.register_component<Drawable>();
+    std::cout << "[DEBUG] Drawable registered" << std::endl;
     registry_.add_system<Position, Velocity>(positionSystem);
+    std::cout << "[DEBUG] Position system added" << std::endl;
     std::cout << "[DEBUG] GameScene constructor finished" << std::endl;
 }
 

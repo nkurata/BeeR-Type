@@ -83,10 +83,11 @@ void LobbyScene::processEvents() {
             sf::Vector2i mousePos = sf::Mouse::getPosition(window);
             if (buttons_.find(-101) != buttons_.end() && buttons_[-101].sprite.getGlobalBounds().contains(mousePos.x, mousePos.y)) {
                 std::cout << "Game starting..." << std::endl;
-                client.switchScene(SceneType::Game);
+                client.send_queue_.push(client.createPacket(Network::PacketType::GAME_START));
                 buttons_.erase(-101);
             } if (buttons_.find(-102) != buttons_.end() && buttons_[-102].sprite.getGlobalBounds().contains(mousePos.x, mousePos.y)) {
-                client.switchScene(SceneType::Game);
+                std::cout << "Game starting..." << std::endl;
+                client.send_queue_.push(client.createPacket(Network::PacketType::GAME_START));
                 buttons_.erase(-102);
             }
         }
