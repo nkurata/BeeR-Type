@@ -29,8 +29,6 @@ Client::~Client()
 
 void Client::stop()
 {
-    std::cout << "[DEBUG] stopping client..." << std::endl;
-
     // Close the SFML window
     if (window_.isOpen()) {
         window_.close();
@@ -52,8 +50,6 @@ void Client::stop()
     if (receive_thread_.joinable()) {
         receive_thread_.join();
     }
-
-    std::cout << "[DEBUG] Client stopped successfully." << std::endl;
 }
 
 void Client::send(const std::string& message)
@@ -84,7 +80,7 @@ void Client::handleReceive(const boost::system::error_code& error, std::size_t b
         parseMessage();
         startReceive();
     } else {
-        std::cerr << "[DEBUG] Error receiving: " << error.message() << std::endl;
+        std::cerr << "[ERROR] Error receiving: " << error.message() << std::endl;
         startReceive();
     }
 }
@@ -114,7 +110,7 @@ void Client::handleSend(const boost::system::error_code& error, std::size_t byte
         // std::cout << "[DEBUG] Message sent." << std::endl;
     } else {
         lag_meter_.packets_lost_++;
-        std::cerr << "[DEBUG] Error sending: " << error.message() << std::endl;
+        std::cerr << "[ERROR] Error sending: " << error.message() << std::endl;
     }
 }
 
@@ -146,7 +142,7 @@ void Client::handleSendTimer(const boost::system::error_code& error) {
         }
         startSendTimer();
     } else {
-        std::cerr << "[DEBUG] Timer error: " << error.message() << std::endl;
+        std::cerr << "[ERROR] Timer error: " << error.message() << std::endl;
     }
 }
 
@@ -196,7 +192,6 @@ void Client::parseMessage()
         packet_data_.new_vy = std::stof(elements[4]);
 
         int packetnb = std::stoi(elements[5]);
-        std::cout << "[DEBUG] Sequence number: " << packetnb << std::endl;
 
         if (packetnb - last_packetnb_ != 1) {
             lag_meter_.packets_lost_ = packetnb - last_packetnb_ - 1;
@@ -205,7 +200,6 @@ void Client::parseMessage()
 
         last_packetnb_ = packetnb;
     } catch (const std::exception& e) {
-        std::cerr << "[ERROR] Failed to parse packet data: " << e.what() << std::endl;
         std::cerr << "[ERROR] Failed to parse packet data: " << e.what() << std::endl;
     }
 }
@@ -238,7 +232,6 @@ void Client::handleHeartBeat()
 {
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double, std::micro> latency = end - heartbeat_start_time_;
-    std::cout << "[DEBUG] Latency: " << latency.count() / 1000.0 << "ms" << std::endl;
 
     lag_meter_.ping = latency.count() / 1000.0;
 }
@@ -249,7 +242,7 @@ void Client::checkTimeout()
     std::chrono::duration<double, std::milli> elapsed = now - last_response_time_;
 
     if (awaiting_ && elapsed.count() > 5000) { // 5000ms timeout
-        std::cerr << "[WARNING] No signal received in 1000ms! Possible connection issue." << std::endl;
+        std::cerr << "[WARNING] Lost Signal." << std::endl;
         awaiting_ = false;
     }
 }
@@ -289,7 +282,6 @@ int Client::main_loop()
             }
         }
         if (!this->window_.isOpen()) {
-            std::cout << "Window closed." << std::endl;
             break;
         }
         mutex_.unlock();

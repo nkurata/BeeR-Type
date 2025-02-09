@@ -82,7 +82,6 @@ std::string Server::createPacket(const Network::PacketType& type, const std::str
     packet_str.push_back(static_cast<uint8_t>(';'));
     sequence_number++;
     packet_str += std::to_string(sequence_number);
-    std::cout << "[DEBUG] Packet created: " << static_cast<int>(type) << " - " << packet_str << std::endl;
     return packet_str;
 }
 

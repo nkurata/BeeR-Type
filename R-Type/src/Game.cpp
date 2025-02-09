@@ -249,7 +249,6 @@ void Game::spawnEnemy(int enemyId, float x, float y) {
     enemies_.emplace(enemyId, Enemy(registry, spawnX, y));
 
     std::string data = std::to_string(enemyId) + ";" + std::to_string(spawnX) + ";" + std::to_string(y) + ";-1;0";
-    std::cout << "Enemy " << enemyId << " spawned at: " << spawnX << ", " << y << std::endl;
     server_->Broadcast(server_->createPacket(Network::PacketType::CREATE_ENEMY, data));
 }
 

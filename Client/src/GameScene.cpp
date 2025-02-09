@@ -87,7 +87,6 @@ void GameScene::handleServerAction() {
     switch (packet_data_.action) {
         case static_cast<int>(Network::PacketType::CREATE_ENEMY): // Enemy
             createSprites(SpriteType::Enemy, enemySprites_);
-            std::cout << "Enemy created" << std::endl;
             break;
         case static_cast<int>(Network::PacketType::CREATE_BOSS): // Boss
             createSprites(SpriteType::Boss, bossSprites_);
