@@ -1,163 +1,314 @@
 #include "GameScene.hpp"
-#include "Client.hpp"
-#include "RTYPEPlayer.hpp"
-#include "RTYPEEnemy.hpp"
-#include "RTYPEBoss.hpp"
-#include "PositionSystem.hpp"
-#include "DrawSystem.hpp"
-#include "ControlSystem.hpp"
-#include "PacketType.hpp"
 #include <iostream>
-#include "Initialization.hpp"
 
-GameScene::GameScene(sf::RenderWindow& window, Client& client)
-    : Scene(window, client), window_(window), client_(client)
+
+GameScene::GameScene(sf::RenderWindow& window, PacketData& packetData, LagMeter& lag_meter) : window_(window), packet_data_(packetData), lag_meter_(lag_meter), game_clock_(), health_(100), score_(0), newAction_(std::nullopt)
 {
-    std::cout << "[DEBUG] GameScene constructor called" << std::endl;
-
-    initBackground();
-    initializeECS(registry_, true, &window);
-    window.setKeyRepeatEnabled(false);
+    init();
+    createSprites(SpriteType::Background, sceneSprites_);
+    setUI(window_);
+    window_.setFramerateLimit(60);
 }
 
-GameScene::~GameScene() {}
+GameScene::~GameScene()
+{
+    cleanup(window_);
+}
 
-void GameScene::initBackground() {
-    std::cout << "[DEBUG] Initializing game sprites" << std::endl;
-    gameTexts_.clear();
-
-    if (!backgroundTexture.loadFromFile("../assets/background.png")) {
+void GameScene::init()
+{
+    if (!textures_[SpriteType::Background].loadFromFile("../assets/background.png")) {
         std::cerr << "[ERROR] Failed to load background texture" << std::endl;
     }
-    backgroundSprite.setTexture(backgroundTexture);
-    std::cout << "[DEBUG] Game sprites initialized" << std::endl;
+    if (!textures_[SpriteType::Bullet].loadFromFile("../assets/bullet.png")) {
+        std::cerr << "[ERROR] Failed to load bullet texture" << std::endl;
+    }
+    if (!textures_[SpriteType::Player].loadFromFile("../assets/player.png")) {
+        std::cerr << "[ERROR] Failed to load player texture" << std::endl;
+    }
+    if (!textures_[SpriteType::Enemy].loadFromFile("../assets/enemy.png")) {
+        std::cerr << "[ERROR] Failed to load enemy texture" << std::endl;
+    }
+    if (!textures_[SpriteType::Boss].loadFromFile("../assets/boss.png")) {
+        std::cerr << "[ERROR] Failed to load boss texture" << std::endl;
+    }
 }
 
-void GameScene::processEvents() {
+void GameScene::update(float deltaTime, sf::RenderWindow& window)
+{
+    handleServerAction();
+    render(window);
+    checkGameEnd();
+    handleInput(window);
+}
+
+void GameScene::render(sf::RenderWindow& window) {
+    window.clear();
+    updatePositions();
+    setStats(window);
+    drawSprites(window);
+    window.display();
+}
+
+void GameScene::createSprites(SpriteType type, std::unordered_map<int, SpriteElement>& spriteMap)
+{
+    SpriteElement spriteElement;
+    spriteElement.id = packet_data_.server_id;
+    spriteElement.sprite.setTexture(textures_[type]);
+    spriteElement.sprite.setPosition(packet_data_.new_x, packet_data_.new_y);
+    spriteElement.vx = packet_data_.new_vx;
+    spriteElement.vy = packet_data_.new_vy;
+    spriteElement.hp = 100;
+    spriteMap[spriteElement.id] = spriteElement;
+}
+
+void GameScene::destroySprite(std::unordered_map<int, SpriteElement>& spriteMap) {
+    spriteMap.erase(packet_data_.server_id);
+}
+
+void GameScene::updateSpritePosition() {
+    if (playerSprites_.find(packet_data_.server_id) != playerSprites_.end()) {
+        auto& spriteElement = playerSprites_[packet_data_.server_id];
+        server_positions_[spriteElement.id] = sf::Vector2f(packet_data_.new_x, packet_data_.new_y);
+        spriteElement.sprite.setPosition(server_positions_[spriteElement.id]);
+    }
+}
+
+void GameScene::resetValues() {
+    packet_data_.action = 0;
+    packet_data_.server_id = 0;
+    packet_data_.new_x = 0;
+    packet_data_.new_y = 0;
+    packet_data_.new_vx = 0;
+    packet_data_.new_vy = 0;
+}
+
+void GameScene::handleServerAction() {
+    switch (packet_data_.action) {
+        case static_cast<int>(Network::PacketType::CREATE_ENEMY): // Enemy
+            createSprites(SpriteType::Enemy, enemySprites_);
+            std::cout << "Enemy created" << std::endl;
+            break;
+        case static_cast<int>(Network::PacketType::CREATE_BOSS): // Boss
+            createSprites(SpriteType::Boss, bossSprites_);
+            break;
+        case static_cast<int>(Network::PacketType::CREATE_PLAYER): // Player
+            createSprites(SpriteType::Player, playerSprites_);
+            playerAliveStatus_[packet_data_.server_id] = true;
+            break;
+        case static_cast<int>(Network::PacketType::CREATE_BULLET): // Bullet
+            createSprites(SpriteType::Bullet, bulletSprites_);
+            break;
+        case static_cast<int>(Network::PacketType::CHANGE): // Update Sprite Position
+            updateSpritePosition();
+            break;
+        case static_cast<int>(Network::PacketType::UI_UPDATE): // Update UI
+            updateUI();
+            break;
+        case static_cast<int>(Network::PacketType::DESTROY_PLAYER): // Destroy Player
+            destroySprite(playerSprites_);
+            playerAliveStatus_[packet_data_.server_id] = false;
+            break;
+        case static_cast<int>(Network::PacketType::DESTROY_ENEMY): // Destroy Enemy
+            destroySprite(enemySprites_);
+            break;
+        case static_cast<int>(Network::PacketType::DESTROY_BOSS): // Destroy Boss
+            destroySprite(bossSprites_);
+            break;
+        case static_cast<int>(Network::PacketType::DESTROY_BULLET): // Destroy Bullet
+            destroySprite(fastBulletSprites_);
+            break;
+        default:
+            break;
+    }
+    resetValues();
+}
+
+void GameScene::updateUI() {
+    health_ = static_cast<int>(packet_data_.new_x);
+    score_ = static_cast<int>(packet_data_.new_y);
+}
+
+void GameScene::setTextProperties(sf::Text& text, const sf::Font& font, unsigned int size, const sf::Color& color, float x, float y) {
+    text.setFont(font);
+    text.setCharacterSize(size);
+    text.setFillColor(color);
+    text.setPosition(x, y);
+}
+
+void GameScene::setUI(sf::RenderWindow& window)
+{
+    if (!font_.loadFromFile("../assets/font.otf"))
+        std::cerr << "[ERROR] loading font file" << std::endl;
+
+    sf::Text scoreText;
+    setTextProperties(scoreText, font_, 24, sf::Color::White, 10, 10);
+    uiSprites[0] = scoreText;
+
+    sf::Text timerText;
+    setTextProperties(timerText, font_, 48, sf::Color::Green, window.getSize().x / 2 - 50, 10);
+    uiSprites[1] = timerText;
+
+    sf::Text healthText;
+    setTextProperties(healthText, font_, 24, sf::Color::Red, 10, window.getSize().y - 30);
+    uiSprites[2] = healthText;
+
+    sf::Text latencyText;
+    setTextProperties(latencyText, font_, 16, sf::Color::White, window.getSize().x - 120, 10);
+    uiSprites[3] = latencyText;
+
+    sf::Text packetLossText;
+    setTextProperties(packetLossText, font_, 16, sf::Color::White, window.getSize().x - 120, 30);
+    uiSprites[4] = packetLossText;
+}
+
+
+void GameScene::setStats(sf::RenderWindow& window) {
+    uiSprites[0].setString("Health: " + std::to_string(health_));
+    uiSprites[1].setString("Score: " + std::to_string(score_));
+
+    sf::Time elapsed = game_clock_.getElapsedTime();
+    int totalSeconds = static_cast<int>(elapsed.asSeconds());
+    int minutes = totalSeconds / 60;
+    int seconds = totalSeconds % 60;
+
+    uiSprites[2].setString("Time: " + std::to_string(minutes) + ":" + (seconds < 10 ? "0" : "") + std::to_string(seconds));
+
+    static sf::Clock latencyClock;
+    if (latencyClock.getElapsedTime().asSeconds() >= 3) {
+        uiSprites[3].setString("Latency: " + std::to_string(static_cast<int>(lag_meter_.ping)) + "ms");
+        latencyClock.restart();
+    }
+    uiSprites[4].setString("Packet Loss: " + std::to_string(static_cast<int>(lag_meter_.packets_lost_)) + "%");
+}
+
+void GameScene::updatePositions() {
+    for (auto& [id, spriteElement] : bulletSprites_) {
+        spriteElement.sprite.move(spriteElement.vx, spriteElement.vy);
+    }
+    for (auto& [id, spriteElement] : enemySprites_) {
+        spriteElement.sprite.move(spriteElement.vx, spriteElement.vy);
+    }
+    for (auto& [id, spriteElement] : bossSprites_) {
+        spriteElement.sprite.move(spriteElement.vx, spriteElement.vy);
+    }
+    for (auto& [id, spriteElement] : fastBulletSprites_) {
+        spriteElement.sprite.move(spriteElement.vx, spriteElement.vy);
+    }
+}
+
+void GameScene::drawSprites(sf::RenderWindow& window) {
+    for (auto& [id, spriteElement] : sceneSprites_) {
+        window.draw(spriteElement.sprite);
+    }
+    for (auto& [id, spriteElement] : playerSprites_) {
+        window.draw(spriteElement.sprite);
+    }
+    for (auto& [id, spriteElement] : enemySprites_) {
+        window.draw(spriteElement.sprite);
+    }
+    for (auto& [id, spriteElement] : bulletSprites_) {
+        window.draw(spriteElement.sprite);
+    }
+    for (auto& [id, spriteElement] : fastBulletSprites_) {
+        window.draw(spriteElement.sprite);
+    }
+    for (auto& [id, spriteElement] : bossSprites_) {
+        window.draw(spriteElement.sprite);
+    }
+    for (auto& [id, text] : uiSprites) {
+        window.draw(text);
+    }
+}
+
+void GameScene::handleInput(sf::RenderWindow& window) {
     sf::Event event;
     while (window.pollEvent(event)) {
-        if (event.type == sf::Event::Closed) {
-            window.close();
-        } else if (event.type == sf::Event::KeyPressed) {
-            handleKeyPress(event.key.code);
-        } else if (event.type == sf::Event::KeyReleased) {
-            handleKeyUnpress(event.key.code);
+        switch (event.type) {
+            case sf::Event::Closed:
+                std::cout << playerSprites_.size() << std::endl;
+                playerSprites_.erase(packet_data_.server_id);
+                destroySprite(playerSprites_);
+                if (checkGameEnd()) {
+                    newAction_ = Network::PacketType::GAME_END;
+                }
+                window.close();
+                break;
+            case sf::Event::KeyPressed:
+                handleKeyPress(event.key.code, window);
+                break;
+            default:
+                break;
         }
     }
 }
 
-void GameScene::handleKeyPress(sf::Keyboard::Key key) {
-    const auto& entity = players[client.server_id]->getEntity();
-    auto ctrl = registry_.get_components<Controllable>()[entity];
+void GameScene::handleKeyPress(sf::Keyboard::Key key, sf::RenderWindow& window)
+{
+    if (!playerAliveStatus_[packet_data_.server_id]) {
+        return;
+    }
 
     switch (key) {
         case sf::Keyboard::Right:
-            ctrl->moveRight = true;
-            client.send_queue_.push(client.createPacket(Network::PacketType::PLAYER_RIGHT));
+            newAction_ = Network::PacketType::PLAYER_RIGHT;
             break;
+
         case sf::Keyboard::Left:
-            ctrl->moveLeft = true;
-            client.send_queue_.push(client.createPacket(Network::PacketType::PLAYER_LEFT));
+            newAction_ = Network::PacketType::PLAYER_LEFT;
             break;
+
         case sf::Keyboard::Up:
-            ctrl->moveUp = true;
-            client.send_queue_.push(client.createPacket(Network::PacketType::PLAYER_UP));
+            newAction_ = Network::PacketType::PLAYER_UP;
             break;
+
         case sf::Keyboard::Down:
-            ctrl->moveDown = true;
-            client.send_queue_.push(client.createPacket(Network::PacketType::PLAYER_DOWN));
+            newAction_ = Network::PacketType::PLAYER_DOWN;
             break;
+
         case sf::Keyboard::Space:
-            client.send_queue_.push(client.createPacket(Network::PacketType::PLAYER_SHOOT));
-            break;
-        case sf::Keyboard::B:
-            client.send_queue_.push(client.createPacket(Network::PacketType::PLAYER_BLAST));
-            break;
-        default:
-            break;
-    }
-}
-
-void GameScene::handleKeyUnpress(sf::Keyboard::Key key) {
-    const auto& player = players[client.server_id];
-    const auto &entity = player->getEntity();
-    auto& ctrl = registry_.get_components<Controllable>()[entity];
-
-    switch (key) {
-        case sf::Keyboard::Right:
-            ctrl->moveRight = false;
-            client.send_queue_.push(client.createPacket(Network::PacketType::PLAYER_STOP_R));
-            break;
-        case sf::Keyboard::Left:
-            ctrl->moveLeft = false;
-            client.send_queue_.push(client.createPacket(Network::PacketType::PLAYER_STOP_L));
-            break;
-        case sf::Keyboard::Up:
-            ctrl->moveUp = false;
-            client.send_queue_.push(client.createPacket(Network::PacketType::PLAYER_STOP_U));
-            break;
-        case sf::Keyboard::Down:
-            ctrl->moveDown = false;
-            client.send_queue_.push(client.createPacket(Network::PacketType::PLAYER_STOP_D));
-            break;
-        default:
-            break;
-    }
-}
-
-
-void GameScene::handleServerActions() {
-    const auto& player = players[client.server_id];
-
-    switch (client.action) {
-        case static_cast<int>(Network::PacketType::PLAYER_STOP_U):
-            std::cout << client.server_id << client.new_x << client.new_y << std::endl;
-            player->setPosition(client.new_x, client.new_y);
-            break;
-        case static_cast<int>(Network::PacketType::PLAYER_STOP_D):
-            player->setPosition(client.new_x, client.new_y);
-            break;
-        case static_cast<int>(Network::PacketType::PLAYER_STOP_L):
-            player->setPosition(client.new_x, client.new_y);
-            break;
-        case static_cast<int>(Network::PacketType::PLAYER_STOP_R):
-            player->setPosition(client.new_x, client.new_y);
-            break;
-        case static_cast<int>(Network::PacketType::PLAYER_SHOOT):
-            bullets.emplace(bulletId, std::make_unique<Bullet>(registry_, client.new_x, client.new_y, 4.f, 1.0f, 0.0f));
-            bulletId++;
-            break;
-        case static_cast<int>(Network::PacketType::PLAYER_BLAST):
-            break;
-        case static_cast<int>(Network::PacketType::PLAYER_CREATE):
-            std::cout << "Player " << client.server_id << " spawned at: " << client.new_x << ", " << client.new_y << std::endl;
-            if (players.find(client.server_id) == players.end()) {
-                players.emplace(client.server_id, std::make_unique<Player>(registry_, client.new_x, client.new_y));
-            }
-            break;
-        case static_cast<int>(Network::PacketType::ENEMY_CREATE):
-            enemies.emplace(enemyId, std::make_unique<Enemy>(registry_, client.new_x, client.new_y));
-            enemyId++;
-            break;
-        case static_cast<int>(Network::PacketType::BOSS_CREATE):
+                newAction_ = Network::PacketType::PLAYER_SHOOT;
         break;
+        case sf::Keyboard::Escape:
+            window.close();
+            newAction_ = Network::PacketType::GAME_END;
+            break;
+        case sf::Keyboard::Num1:
+            break;
+        case sf::Keyboard::Num2:
+            break;
         default:
             break;
     }
-    // Update player position based on server response
-    client.resetValues();
 }
 
-void GameScene::update() {
-    handleServerActions();
-    registry_.run_systems();
+void GameScene::setPacketData(PacketData& packetData) {
+    packet_data_ = packetData;
 }
 
-void GameScene::render() {
+std::optional<Network::PacketType> GameScene::sendOverPackets() {
+    auto action = newAction_;
+    newAction_.reset();
+    return action;
+}
+
+void GameScene::setLagMeter(LagMeter& lm) {
+    lag_meter_ = lm;
+}
+
+bool GameScene::checkGameEnd() {
+    if (playerSprites_.empty()) {
+        return true;
+    }
+    return false;
+}
+
+void GameScene::cleanup(sf::RenderWindow& window) {
     window.clear();
-    window.draw(backgroundSprite);
-
-    drawSystem(registry_, window_, registry_.get_components<Position>(), registry_.get_components<Drawable>());
-    renderOverlay();
-    window.display();
+    playerSprites_.clear();
+    enemySprites_.clear();
+    bulletSprites_.clear();
+    sceneSprites_.clear();
+    bossSprites_.clear();
+    uiSprites.clear();
 }

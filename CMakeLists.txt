@@ -60,6 +60,7 @@ FetchContent_MakeAvailable(Boost)
 
 # Create a meta-target called Boost::Boost bundling sub-libs
 add_library(Boost INTERFACE)
+
 add_library(Boost::Boost ALIAS Boost)
 target_link_libraries(Boost INTERFACE
     Boost::asio
@@ -92,8 +93,8 @@ target_link_libraries(SFML INTERFACE
 
 # Add executables for client/server "main.cpp"
 # Client main
-add_executable(r-type_client Client/main.cpp
-        ECS/Initialization.hpp)
+add_executable(r-type_client Client/main.cpp)
+
 target_link_libraries(r-type_client
     Client
     Boost::Boost
@@ -102,7 +103,7 @@ target_link_libraries(r-type_client
 
 # Server main
 add_executable(r-type_server Server/main.cpp
-        ECS/Initialization.hpp)
+)
 target_link_libraries(r-type_server
     Server
     Boost::Boost

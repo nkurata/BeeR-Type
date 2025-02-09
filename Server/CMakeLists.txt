@@ -16,12 +16,12 @@ include_directories(
     ${CMAKE_SOURCE_DIR}/ECS
     ${CMAKE_SOURCE_DIR}/ECS/systems
     ${CMAKE_SOURCE_DIR}/ECS/components
+    ${CMAKE_SOURCE_DIR}/Server/Errors
 )
 
 # The Server library sources
 set(SERVER_SOURCES
     src/Server.cpp
-    Errors/Throws.hpp
 )
 
 add_library(Server ${SERVER_SOURCES})

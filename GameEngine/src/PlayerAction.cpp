@@ -1,10 +1,3 @@
-/*
-** EPITECH PROJECT, 2025
-** R-Type [WSL: Ubuntu]
-** File description:
-** PlayerAction
-*/
-
 #include "PlayerAction.hpp"
 
 PlayerAction::PlayerAction(int player_id, int action_id)

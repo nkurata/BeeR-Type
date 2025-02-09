@@ -10,8 +10,6 @@
 
 struct Velocity {
     float vx, vy;
-
-    Velocity(float dx = 0.0f, float dy = 0.0f) : vx(dx), vy(dy) {}
 };
 
 #endif // VELOCITY_H

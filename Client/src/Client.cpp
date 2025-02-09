@@ -1,84 +1,64 @@
 #include "Client.hpp"
-#include "Scene.hpp"
-#include "LobbyScene.hpp"
-#include "GameScene.hpp"
-#include <iostream>
 
 using boost::asio::ip::udp;
 
-Client::Client(boost::asio::io_context &io_context, const std::string &host, short server_port, short client_port)
-    : socket_(io_context, udp::endpoint(udp::v4(), client_port)),
-    io_context_(io_context), window(sf::VideoMode(1280, 720), "R-Type Client"),
-    send_timer_(io_context),
-    receive_timer_(io_context),
-    currentScene(nullptr),
-    lastHeartbeatTime_(std::chrono::high_resolution_clock::now()),
-    reset_timer_(io_context)
+Client::Client(boost::asio::io_context& ioContext, const std::string& host, short serverPort, short clientPort)
+    : socket_(ioContext, udp::endpoint(udp::v4(), clientPort)),
+      io_context_(ioContext),
+      window_(sf::VideoMode(1280, 720), "R-Type Client"),
+      send_timer_(ioContext),
+      heartbeat_timer_(ioContext),
+      last_heartbeat_time_(std::chrono::high_resolution_clock::now()),
+      last_response_time_(std::chrono::high_resolution_clock::now())
 {
-    // std::cout << "[DEBUG] Client constructor called" << std::endl;
-    udp::resolver resolver(io_context);
-    udp::resolver::query query(udp::v4(), host, std::to_string(server_port));
+    udp::resolver resolver(ioContext);
+    udp::resolver::query query(udp::v4(), host, std::to_string(serverPort));
     server_endpoint_ = *resolver.resolve(query).begin();
-    std::cout << "Connected to " << host << ":" << server_port << " from client port " << client_port << std::endl;
+    std::cout << "Connected to " << host << ":" << serverPort << " from client port " << clientPort << std::endl;
 
-    startReceive(); // Start the regulated receive
-    startSendTimer(); // Start the send timer
-    startResetTimer(); // Start the reset timer
-    receive_thread_ = std::thread(&Client::run_receive, this);
-    // std::cout << "[DEBUG] Client constructor finished" << std::endl;
-
-    switchScene(SceneType::Lobby); // Start with the Lobby scene
+    startReceive();
+    startSendTimer();
+    schedulePing();
+    receive_thread_ = std::thread(&Client::runReceive, this);
 }
 
 Client::~Client()
 {
-    // std::cout << "[DEBUG] Client destructor called" << std::endl;
+    stop();
+}
+
+void Client::stop()
+{
+    std::cout << "[DEBUG] stopping client..." << std::endl;
+
+    // Close the SFML window
+    if (window_.isOpen()) {
+        window_.close();
+    }
+
+    // stop Boost.Asio IO context
     io_context_.stop();
-    socket_.close();
+
+    // stop timers
+    send_timer_.cancel();
+    heartbeat_timer_.cancel();
+
+    // Close the socket
+    if (socket_.is_open()) {
+        socket_.close();
+    }
+
+    // Ensure the receive thread stops
     if (receive_thread_.joinable()) {
         receive_thread_.join();
     }
-    currentScene.reset();
-    // std::cout << "[DEBUG] Client destructor finished" << std::endl;
+
+    std::cout << "[DEBUG] Client stopped successfully." << std::endl;
 }
 
-void Client::resetValues()
-{
-    action = 0;
-    server_id = 0;
-    new_x = 0.0;
-    new_y = 0.0;
-}
-
-void Client::switchScene(SceneType type) {
-    currentScene.reset();
-
-    switch (type) {
-        case SceneType::Lobby:
-            currentScene = std::make_unique<LobbyScene>(window, *this);
-            break;
-        case SceneType::Game:
-            currentScene = std::make_unique<GameScene>(window, *this);
-            break;
-        default:
-            std::cerr << "[ERROR] Unknown scene type" << std::endl;
-            break;
-    }
-}
-
-// Getters
-int Client::getPing() {
-    return ping_;
-}
-
-int Client::getNumClients() {
-    return numClients_;
-}
-
-// Network Communication
 void Client::send(const std::string& message)
 {
-    packetSent++;
+    packets_sent_++;
     socket_.async_send_to(
         boost::asio::buffer(message), server_endpoint_,
         boost::bind(&Client::handleSend, this,
@@ -95,12 +75,64 @@ void Client::startReceive()
                     boost::asio::placeholders::bytes_transferred));
 }
 
-void Client::sendExitPacket()
+void Client::handleReceive(const boost::system::error_code& error, std::size_t bytesTransferred)
 {
-    send(createPacket(Network::PacketType::DISCONNECTED));
+    if (!error || error == boost::asio::error::message_size) {
+        mutex_.lock();
+        packets_received_++;
+        received_data_.assign(recv_buffer_.data(), bytesTransferred);
+        parseMessage();
+        startReceive();
+    } else {
+        std::cerr << "[DEBUG] Error receiving: " << error.message() << std::endl;
+        startReceive();
+    }
 }
 
-void Client::startSendTimer() {
+double Client::resetPacketLoss()
+{
+    static auto lastResetTime = std::chrono::high_resolution_clock::now();
+    auto now = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> elapsed = now - lastResetTime;
+
+    if (elapsed.count() >= 10.0) {
+        lag_meter_.packets_lost_ = 0;
+        lastResetTime = now;
+    }
+
+    double packetLoss = 0.0;
+    double totalPackets = packets_sent_ + packets_received_;
+    if (totalPackets > 0) {
+        packetLoss = (lag_meter_.packets_lost_ / totalPackets) * 100.0;
+    }
+    return std::max(0.0, packetLoss);
+}
+
+void Client::handleSend(const boost::system::error_code& error, std::size_t bytesTransferred)
+{
+    if (!error) {
+        // std::cout << "[DEBUG] Message sent." << std::endl;
+    } else {
+        lag_meter_.packets_lost_++;
+        std::cerr << "[DEBUG] Error sending: " << error.message() << std::endl;
+    }
+}
+
+void Client::runReceive()
+{
+    io_context_.run();
+}
+
+std::string Client::createPacket(Network::PacketType type)
+{
+    Network::Packet packet;
+    packet.type = type;
+    std::string packetStr;
+    packetStr.push_back(static_cast<uint8_t>(type));
+    return packetStr;
+}
+
+void Client::startSendTimer(){
     send_timer_.expires_after(std::chrono::milliseconds(1));
     send_timer_.async_wait(boost::bind(&Client::handleSendTimer, this, boost::asio::placeholders::error));
 }
@@ -114,181 +146,153 @@ void Client::handleSendTimer(const boost::system::error_code& error) {
         }
         startSendTimer();
     } else {
-        std::cerr << "[ERROR] Timer error: " << error.message() << std::endl;
+        std::cerr << "[DEBUG] Timer error: " << error.message() << std::endl;
     }
 }
 
-void Client::startResetTimer() {
-    reset_timer_.expires_after(std::chrono::seconds(5));
-    reset_timer_.async_wait(boost::bind(&Client::handleResetTimer, this, boost::asio::placeholders::error));
-}
-
-void Client::handleResetTimer(const boost::system::error_code& error) {
-    if (!error) {
-        packetLost = 0; // Reset packet loss counter
-        startResetTimer(); // Restart the timer
-    } else {
-        std::cerr << "[ERROR] Reset timer error: " << error.message() << std::endl;
-    }
-}
-void Client::regulate_receive()
-{
-    receive_timer_.expires_after(std::chrono::milliseconds(10)); // Set the interval to 10 milliseconds
-    receive_timer_.async_wait(boost::bind(&Client::startReceive, this));
-}
-
-// private Network Communication
-void Client::handleReceive(const boost::system::error_code& error, std::size_t bytes_transferred)
-{
-    if (!error || error == boost::asio::error::message_size) {
-        mutex_.lock();
-        packetReceived++;
-        received_data.assign(recv_buffer_.data(), bytes_transferred);
-        parseMessage(received_data);
-        startReceive();
-    } else {
-        std::cerr << "[ERROR] Error receiving: " << error.message() << std::endl;
-        startReceive();
-    }
-}
-
-void Client::handleSend(const boost::system::error_code& error, std::size_t bytes_transferred)
-{
-    if (!error) {
-        // std::cout << "[DEBUG] Sent " << bytes_transferred << " bytes" << std::endl;
-    } else {
-        packetLost++;
-        std::cerr << "[ERROR] Error sending: " << error.message() << std::endl;
-    }
-}
-
-void Client::run_receive()
-{
-    io_context_.run();
-}
-
-// Packet Handling
-std::string Client::createPacket(Network::PacketType type)
-{
-    Network::Packet packet;
-    packet.type = type;
-    std::string packet_str;
-    packet_str.push_back(static_cast<uint8_t>(type));
-    return packet_str;
-}
-
-std::string Client::createMousePacket(Network::PacketType type, int x, int y)
-{
-    Network::Packet packet;
-    packet.type = type;
-
-    std::ostringstream packet_str;
-    packet_str << static_cast<uint8_t>(type) << ";" << x << ";" << y;
-
-    return packet_str.str();
-}
-
-std::vector<std::string> deserializePacket(const std::string packet_str)
+std::vector<std::string> Client::deserialisePacket(std::string packetInside)
 {
     std::vector<std::string> elements;
-    std::stringstream ss(packet_str);
+    std::stringstream ss(packetInside);
     std::string segment;
 
     while (std::getline(ss, segment, ';')) {
         elements.push_back(segment);
     }
-
+    if (elements.size() != 6) {
+        std::cerr << "[ERROR] Invalid packet format" << std::endl;
+        return {};
+    }
     return elements;
 }
 
-void Client::parseMessage(std::string packet_data) {
-    if (packet_data.empty()) {
+void Client::parseMessage()
+{
+    if (received_data_.empty()) {
         std::cerr << "[ERROR] Empty packet data." << std::endl;
         return;
     }
-    uint8_t packet_type = static_cast<uint8_t>(packet_data[0]);
 
-    std::vector<std::string> elements = deserializePacket(packet_data.substr(2));
+    uint8_t packetType = static_cast<uint8_t>(received_data_[0]);
+    std::vector<std::string> elements = deserialisePacket(received_data_.substr(2));
     if (elements.empty()) {
         std::cerr << "[ERROR] Failed to parse packet data." << std::endl;
         return;
     }
 
+    if (packetType == static_cast<uint8_t>(Network::PacketType::HEARTBEAT)) {
+        handleHeartBeat();
+        awaiting_ = false;
+        last_response_time_ = std::chrono::high_resolution_clock::now();
+        return;
+    }
+
     try {
-        int packetNumber = std::stoi(elements.back());
-        std::cout << "Packet number:" << packetNumber << std::endl;
-        std::cout << "Last Packet:" << lastPacketnb << std::endl;
-        std::cout << "Packet Lost:" << packetLost << std::endl;
-        if (packetNumber - lastPacketnb > 1) {
-            packetLost += packetNumber - lastPacketnb - 1;
-        }
-        lastPacketnb = packetNumber;
+        packet_data_.action = static_cast<int>(packetType);
+        packet_data_.server_id = std::stoi(elements[0]);
+        packet_data_.new_x = std::stof(elements[1]);
+        packet_data_.new_y = std::stof(elements[2]);
+        packet_data_.new_vx = std::stof(elements[3]);
+        packet_data_.new_vy = std::stof(elements[4]);
 
-        if (packet_type == static_cast<uint8_t>(Network::PacketType::HEARTBEAT)) {
-            handleHeartbeatMessage(elements);
-            return;
-        }
-        if (elements.size() < 3) {
-            std::cerr << "[ERROR] Invalid packet data." << std::endl;
-            return;
-        }
-        if (packet_type == static_cast<uint8_t>(Network::PacketType::GAME_START)) {
-            switchScene(SceneType::Game);
-            return;
+        int packetnb = std::stoi(elements[5]);
+        std::cout << "[DEBUG] Sequence number: " << packetnb << std::endl;
+
+        if (packetnb - last_packetnb_ != 1) {
+            lag_meter_.packets_lost_ = packetnb - last_packetnb_ - 1;
+            std::cerr << "[WARNING] Packets lost: " << lag_meter_.packets_lost_ << std::endl;
         }
 
-        action = static_cast<int>(packet_type);
-        server_id = std::stoi(elements[0]);
-        new_x = std::stof(elements[1]);
-        new_y = std::stof(elements[2]);
-
+        last_packetnb_ = packetnb;
     } catch (const std::exception& e) {
+        std::cerr << "[ERROR] Failed to parse packet data: " << e.what() << std::endl;
         std::cerr << "[ERROR] Failed to parse packet data: " << e.what() << std::endl;
     }
 }
 
-void Client::sendHeartbeatMessage()
+void Client::schedulePing()
+{
+    heartbeat_timer_.expires_after(std::chrono::seconds(2));
+    heartbeat_timer_.async_wait([this](const boost::system::error_code& ec) {
+        if (!ec) {
+            sendHeartBeat();
+            checkTimeout();
+
+            double packet_loss = resetPacketLoss();
+            lag_meter_.packets_lost_ = packet_loss;
+            schedulePing();
+        }
+    });
+}
+
+void Client::sendHeartBeat()
+{
+    if (!awaiting_) {
+        heartbeat_start_time_ = std::chrono::high_resolution_clock::now();
+        send_queue_.push(createPacket(Network::PacketType::HEARTBEAT));
+        awaiting_ = true;
+    }
+}
+
+void Client::handleHeartBeat()
+{
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double, std::micro> latency = end - heartbeat_start_time_;
+    std::cout << "[DEBUG] Latency: " << latency.count() / 1000.0 << "ms" << std::endl;
+
+    lag_meter_.ping = latency.count() / 1000.0;
+}
+
+void Client::checkTimeout()
 {
     auto now = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double, std::milli> elapsed = now - lastHeartbeatTime_;
-    
-    if (elapsed.count() > 1000) {
-        auto start = std::chrono::high_resolution_clock::now();
-        send_queue_.push(createPacket(Network::PacketType::HEARTBEAT));
-        heartBeatStart_ = start;
-        lastHeartbeatTime_ = now;
+    std::chrono::duration<double, std::milli> elapsed = now - last_response_time_;
+
+    if (awaiting_ && elapsed.count() > 5000) { // 5000ms timeout
+        std::cerr << "[WARNING] No signal received in 1000ms! Possible connection issue." << std::endl;
+        awaiting_ = false;
     }
 }
 
-void Client::handleHeartbeatMessage(std::vector<std::string> elements) {
-    if (elements.size() > 0) {
-        int newNumClients = std::stoi(elements[0]);
-        if (newNumClients > numClients_) {
-            currentScene->addChatLog("Player connected. Total players: " + std::to_string(newNumClients));
-        } else if (newNumClients < numClients_) {
-            currentScene->addChatLog("Player disconnected. Total players: " + std::to_string(newNumClients));
-        }
-        numClients_ = newNumClients;
-    }
-
-    // Calculate the ping as the round-trip time
-    auto now = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double, std::milli> elapsed = now - heartBeatStart_;
-    ping_ = elapsed.count();
-}
-
-int Client::clientLoop()
+int Client::main_loop()
 {
     send_queue_.push(createPacket(Network::PacketType::REQCONNECT));
+    bool isGameStarted = false;
+    LobbyScene lobbyScene(this->window_, packet_data_);
+    GameScene gameScene(this->window_, packet_data_, lag_meter_);
 
-    while (this->window.isOpen()) {
-        if (currentScene) {
-            currentScene->processEvents();
-            currentScene->update();
-            currentScene->render();
-            sendHeartbeatMessage();
-            mutex_.unlock();
+    while (this->window_.isOpen()) {
+        float deltaTime = game_clock_.restart().asSeconds();
+
+        if (packet_data_.action == 30) {
+            std::cerr << "[ERROR] Game already started. Exiting..." << std::endl;
+            return 1;
         }
+
+        if (!isGameStarted && this->window_.isOpen()) {
+            lobbyScene.setPacketData(packet_data_);
+            lobbyScene.update(deltaTime, this->window_);
+            auto newAction = lobbyScene.sendOverPackets();
+            if (newAction.has_value()) {
+                send_queue_.push(createPacket(newAction.value()));
+            }
+            isGameStarted = lobbyScene.checkGameStart();
+        }
+
+        if (isGameStarted && this->window_.isOpen()) {
+            gameScene.setPacketData(packet_data_);
+            gameScene.setLagMeter(lag_meter_);
+            gameScene.update(deltaTime, this->window_);
+            auto newAction = gameScene.sendOverPackets();
+            if (newAction.has_value()) {
+                send_queue_.push(createPacket(newAction.value()));
+            }
+        }
+        if (!this->window_.isOpen()) {
+            std::cout << "Window closed." << std::endl;
+            break;
+        }
+        mutex_.unlock();
     }
     sendExitPacket();
     return 0;

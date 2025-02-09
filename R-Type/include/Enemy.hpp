@@ -5,17 +5,15 @@
 
 class Enemy {
 public:
-    Enemy(Registry& registry, float x, float y);
+    Enemy(Registry registry, float x, float y);
     ~Enemy();
 
     void move(float x, float y);
     Registry::Entity getEntity() const;
-
     const Registry& getRegistry() const;
-    void setRegistry(const Registry& newRegistry);
 
 private:
-    Registry& registry;
+    Registry registry;
     Registry::Entity entity;
 };
 

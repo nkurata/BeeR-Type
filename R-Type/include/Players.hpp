@@ -2,27 +2,27 @@
 #define PLAYER_HPP
 
 #include "Registry.hpp"
-#include "Bullet.hpp"
-#include <vector>
-
 
 class Player {
 public:
-    Player(Registry& registry, float x, float y);
+    Player();
+    Player(Registry registry, float x, float y);
     ~Player();
 
-    void move(float vx, float vy);
-    Registry::Entity getEntity() const;
-    std::pair<float, float> getVelocity() const;
-    std::pair<float, float> getPosition() const;
-    int getHealth() const;
+    void move(float x, float y);
+    void updateHp(float amount);
+    void updateScore(float amount);
+    float getHp() const;
+    float getScore() const;
 
-    void printPosition();
+    Registry::Entity getEntity() const;
+    const Registry& getRegistry() const;
 
 private:
-    Registry& registry;
+    Registry registry;
     Registry::Entity entity;
-    int health;
+    float hp = 0;
+    float score = 0;
 };
 
 #endif // PLAYER_HPP

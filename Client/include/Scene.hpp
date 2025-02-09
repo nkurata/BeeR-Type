@@ -2,8 +2,7 @@
 #define SCENE_HPP
 
 #include <SFML/Graphics.hpp>
-#include <vector>
-#include <string>
+
 
 // Forward declaration of Client class
 class Client;
@@ -15,28 +14,15 @@ enum class SceneType {
 
 class Scene {
 public:
-    Scene(sf::RenderWindow& window, Client& client);
     virtual ~Scene() = default;
 
-    virtual void processEvents() = 0;
-    virtual void update() = 0;
-    virtual void render() = 0;
+    virtual void init() = 0;
+    virtual void update(float deltaTime, sf::RenderWindow& window) = 0;
+    virtual void render(sf::RenderWindow& window) = 0;
+    virtual void handleInput(sf::RenderWindow& window) = 0;
+    virtual void cleanup(sf::RenderWindow& window) = 0;
 
-    void updatePing();
-    void addChatLog(const std::string& message);
-    void renderOverlay();
-    void packetLoss();
-
-protected:
-    sf::RenderWindow& window;
-    Client& client;
-    int numClients_;
-    int current_ping_ = 0;
-    std::vector<std::string> chat_log_;
-    const size_t max_chat_messages_ = 10;
-    sf::Font font_;
-    sf::Text ping_text_;
-    sf::Text chat_text_;
+    virtual sf::RenderWindow* getWindow() = 0;
 };
 
 #endif // SCENE_HPP

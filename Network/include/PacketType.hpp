@@ -1,10 +1,3 @@
-/*
-** EPITECH PROJECT, 2024
-** R-Type [WSL: Ubuntu]
-** File description:
-** PacketType
-*/
-
 #pragma once
 
 #include <cstdint>
@@ -15,29 +8,32 @@ namespace Network {
     enum class PacketType {
         NONE = 0,
         REQCONNECT = 1,
-        CONNECTED = 2,
-        DISCONNECTED = 3,
-        GAME_START = 4,
-        GAME_END = 5,
-        KILL = 6,
-        CHANGE = 7,
-        
-        PLAYER_CREATE = 10,
-        ENEMY_CREATE = 11,
-        BULLET_CREATE = 12,
-        BOSS_CREATE = 13,
+        DISCONNECTED = 2,
+        GAME_START = 3,
+        PLAYER_DEAD = 4,
+        PLAYER_JOIN = 5,
+        PLAYER_SHOOT = 6,
 
-        PLAYER_UP = 20,
-        PLAYER_DOWN = 21,
-        PLAYER_LEFT = 22,
-        PLAYER_RIGHT = 23,
-        PLAYER_STOP_U = 24,
-        PLAYER_STOP_D = 25,
-        PLAYER_STOP_L = 26,
-        PLAYER_STOP_R = 27,
-        PLAYER_SHOOT = 28,
-        PLAYER_BLAST = 29,
-        
+        GAME_END = 15,
+        PLAYER_RIGHT = 16,
+        PLAYER_LEFT = 17,
+        PLAYER_UP = 18,
+        PLAYER_DOWN = 19,
+
+        CREATE_ENEMY = 22,
+        CREATE_BOSS = 23,
+        CREATE_PLAYER = 24,
+        CREATE_BULLET = 25,
+
+        CHANGE = 29,
+        GAME_STARTED = 30,
+        GAME_NOT_STARTED = 31,
+        UI_UPDATE = 34,
+        DESTROY_PLAYER = 35,
+        DESTROY_ENEMY = 36,
+        DESTROY_BOSS = 37,
+        DESTROY_BULLET = 38,
+
         HEARTBEAT = 99,
     };
 }

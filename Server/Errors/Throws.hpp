@@ -41,4 +41,9 @@ namespace RType
     NEW_EXCEPTION(UnknownException)
     NEW_EXCEPTION(PermissionDeniedException)
     NEW_EXCEPTION(NotImplementedException)
+
+    NEW_EXCEPTION(GameException)
+NEW_EXCEPTION(InvalidGamePathException)
+NEW_EXCEPTION(GameLoadException)
+NEW_EXCEPTION(InvalidGameException)
 }

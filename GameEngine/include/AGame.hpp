@@ -1,35 +1,56 @@
-/*
-** EPITECH PROJECT, 2025
-** R-Type [WSL: Ubuntu]
-** File description:
-** AGame
-*/
-
 #ifndef AGAME_HPP
 #define AGAME_HPP
 
 #include "IGame.hpp"
+#include "Players.hpp"
+#include "Bullet.hpp"
+#include "Registry.hpp"
 #include "PlayerAction.hpp"
-#include "Server.hpp"
+#include "Position.hpp"
+#include "Drawable.hpp"
+#include "Collidable.hpp"
+#include "Controllable.hpp"
+#include "Projectile.hpp"
+#include "Velocity.hpp"
+#include "Registry.hpp"
 #include <vector>
 #include <mutex>
+#include <map>
+
+class Server;
 
 class AGame : public IGame {
-protected:
-    std::vector<PlayerAction> playerActions_;
-    Server* server_;
-    std::mutex playerActionsMutex_;
-public:
-    AGame(Server* server);
-    virtual ~AGame();
-    virtual void update() = 0;
-    virtual void run(int numPlayers) = 0;
+    public:
+        AGame(Server* server);
+        virtual ~AGame();
 
-    void addPlayerAction(int playerId, int actionId) override;
-    void deletePlayerAction() override;
-    const std::vector<PlayerAction>& getPlayerActions() const override;
+        // Implement player action management functions
+        void addPlayerAction(int playerId, int actionId) override;
+        void processPlayerActions() override;
+        void deletePlayerAction() override;
+        const std::vector<PlayerAction>& getPlayerActions() const override;
 
-    virtual void processPlayerActions() override = 0;
+        //Getter functions for player positions for server to build package to send to client
+        std::pair<float, float> getPlayerPosition(int playerId) const override;
+        std::pair<float, float> getBulletPosition(int bulletId) const override;
+
+        // Implement entity spawn and delete management functions
+        void spawnPlayer(int playerId, float x, float y) override;
+        void spawnBullet(int playerId) override;
+        void killPlayers(int entityId) override;
+        void killBullets(int entityId) override;
+        void killEntity(int entityId) override;
+
+        void registerComponents();
+    protected:
+        std::vector<PlayerAction> playerActions;
+        std::map<int, Player> players;
+        std::map<int, Bullet> bullets;
+        std::unordered_map<int, int> bulletIdWhoShot;
+        std::unordered_map<int, int> bulletIdWhoShotFast;
+        Registry registry;
+        Server* m_server;
+        std::mutex playerActionsMutex;
 };
 
 #endif // AGAME_HPP

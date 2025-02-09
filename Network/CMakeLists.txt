@@ -27,7 +27,6 @@ set(NETWORK_HEADERS
     include/Packet.hpp
     include/PacketType.hpp
     include/ThreadSafeQueue.hpp
-    include/GameLoader.hpp
 )
 
 # Create Network library

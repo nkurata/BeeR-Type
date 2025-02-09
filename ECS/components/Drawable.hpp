@@ -8,20 +8,10 @@
 #ifndef DRAWABLE_H
     #define DRAWABLE_H
 
-#include <SFML/Graphics/Sprite.hpp>
-#include <SFML/Graphics/Texture.hpp>
+#include <SFML/Graphics.hpp>
 
 struct Drawable {
-    sf::Sprite sprite;
-    sf::Texture texture;
-    std::string path;
-
-    Drawable(std::string path) : path(path) {
-        if (!texture.loadFromFile(path)) {
-            throw std::runtime_error("Failed to load texture from file: " + path);
-        }
-        sprite.setTexture(texture);
-    }
+    sf::RectangleShape shape;
 };
 
 #endif // DRAWABLE_H

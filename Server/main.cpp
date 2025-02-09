@@ -1,15 +1,10 @@
-/*
-** EPITECH PROJECT, 2024
-** R-Type [WSL: Ubuntu]
-** File description:
-** main
-*/
-
 #include "Server.hpp"
-#include "Errors/Throws.hpp"
+#include "Throws.hpp"
 #include "Packet.hpp"
 #include "ThreadSafeQueue.hpp"
 #include "PacketHandler.hpp"
+#include "Game.hpp"
+#include <dlfcn.h>
 
 short parsePort(int ac, char **av)
 {
@@ -24,15 +19,39 @@ short parsePort(int ac, char **av)
     }
 }
 
+typedef IGame *createGame_t(Server &server);
+IGame *getGameInstance(const std::string &path, Server &server)
+{
+    void *handle = dlopen(path.c_str(), RTLD_LAZY);
+    if (!handle) {
+        throw std::runtime_error(dlerror());
+    }
+    auto *createGame = (createGame_t *)dlsym(handle, "getRTypeGame");
+    const char *dlsym_error = dlerror();
+    if (dlsym_error) {
+        throw std::runtime_error(dlsym_error);
+    } if (!createGame) {
+        throw std::runtime_error(dlerror());
+    } if (handle) {
+        dlclose(handle);
+    }
+    return createGame(server);
+}
+
 void runServer(short port) {
     try {
         boost::asio::io_context io_context;
         ThreadSafeQueue<Network::Packet> packetQueue;
 
         Server server(io_context, port, packetQueue);
-        Game game(&server);
 
-        Network::PacketHandler packetHandler(packetQueue, server, game);
+        //IGame *game = getGameInstance("R-Type.so", server);µ
+        IGame *game = new Game(&server);
+        if (!game) {
+            throw RType::UnknownException("Failed to load game instance");
+        }
+        Network::PacketHandler packetHandler(packetQueue, dynamic_cast<Game &>(*game), server);
+
         packetHandler.start();
 
         std::cout << "Server started\nListening on UDP port " << port << std::endl;
@@ -44,7 +63,7 @@ void runServer(short port) {
         if (serverThread.joinable())
             serverThread.join();
 
-        // packetHandler.stop();
+        packetHandler.stop();
     } catch (const boost::system::system_error& e) {
         if (e.code() == boost::asio::error::access_denied) {
             throw RType::PermissionDeniedException("Permission denied");

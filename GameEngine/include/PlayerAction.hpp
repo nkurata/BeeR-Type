@@ -1,10 +1,3 @@
-/*
-** EPITECH PROJECT, 2025
-** R-Type [WSL: Ubuntu]
-** File description:
-** PlayerAction
-*/
-
 #ifndef PLAYERACTION_HPP
 #define PLAYERACTION_HPP
 

@@ -1,19 +1,13 @@
-/*
-** EPITECH PROJECT, 2024
-** R-Type [WSL: Ubuntu]
-** File description:
-** main
-*/
-
 #include "Client.hpp"
 
 Client* global_client = nullptr;
 
 void signalHandler(int signum) {
     if (global_client) {
+        std::cout << "Interrupt signal (" << signum << ") received." << std::endl;
+        global_client->stop();
         global_client->sendExitPacket();
     }
-    std::exit(signum);
 }
 
 int main(int ac, char **av)
@@ -30,13 +24,14 @@ int main(int ac, char **av)
     try {
         boost::asio::io_context io_context;
         Client client(io_context, host, server_port, client_port);
-        global_client = &client;
 
+        global_client = &client;
         std::signal(SIGINT, signalHandler);
-        client.clientLoop();
+        client.main_loop();
     } catch (const std::exception& e) {
         std::cerr << "Exception: " << e.what() << std::endl;
     }
 
     return 0;
 }
+
