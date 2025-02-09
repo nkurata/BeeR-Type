@@ -22,7 +22,7 @@ Server::Server(boost::asio::io_context& io_context, short port, ThreadSafeQueue<
 : socket_(io_context, udp::endpoint(udp::v4(), port)), m_packetQueue(packetQueue), _nbClients(0), m_running(false), send_timer_(io_context), receive_timer_(io_context) // Initialize timers
 {
     regulate_receive();
-    start_send_timer();
+    startSendTimer();
 }
 
 Server::~Server()
@@ -41,7 +41,7 @@ void Server::send_to_client(const std::string& message, const udp::endpoint& cli
         boost::asio::buffer(message), client_endpoint,
         [](const boost::system::error_code& error, std::size_t bytes_transferred) {
             if (!error) {
-                std::cout << "[DEBUG] Message sent to client." << std::endl;
+                // std::cout << "[DEBUG] Message sent to client." << std::endl;
             } else {
                 std::cerr << "[ERROR] Error sending to client: " << error.message() << std::endl;
             }
@@ -51,7 +51,6 @@ void Server::send_to_client(const std::string& message, const udp::endpoint& cli
 void Server::Broadcast(const std::string& message)
 {
     {
-        std::lock_guard<std::mutex> lock(clients_mutex_);
         send_queue_.push(message); // Add to queue
     }
 }
@@ -63,11 +62,11 @@ void Server::Broadcast(const std::string& message)
  * from a remote endpoint. When data is received, the provided handler function
  * is called to process the received data.
  */
-void Server::start_receive()
+void Server::startReceive()
 {
     socket_.async_receive_from(
         boost::asio::buffer(recv_buffer_), remote_endpoint_,
-        boost::bind(&Server::handle_receive, this,
+        boost::bind(&Server::handleReceive, this,
                     boost::asio::placeholders::error,
                     boost::asio::placeholders::bytes_transferred));
 }
@@ -83,11 +82,11 @@ void Server::start_receive()
  * @param bytes_transferred The number of bytes received.
  */
 
-void Server::handle_receive(const boost::system::error_code &error, std::size_t bytes_transferred)
+void Server::handleReceive(const boost::system::error_code &error, std::size_t bytes_transferred)
 {
     if (!error || error == boost::asio::error::message_size) {
         std::string received_data(recv_buffer_.data(), bytes_transferred);
-        std::cout << "[DEBUG] Received: " << static_cast<int>(received_data[0]) << std::endl;
+        // std::cout << "[DEBUG] Received: " << static_cast<int>(received_data[0]) << std::endl;
 
         Network::Packet packet;
         packet.type = deserializePacket(received_data).type;
@@ -105,8 +104,7 @@ Network::Packet Server::deserializePacket(const std::string& packet_str)
     return packet;
 }
 
-std::string Server::createPacket(const Network::PacketType& type, const std::string& data)
-{
+std::string Server::createPacket(const Network::PacketType& type, const std::string& data) {
     std::string packet_str;
     std::string packet_data = data.empty() ? "-1;-1;-1" : data;
     std::cout << "[DEBUG] Creating packet with type: " << static_cast<int>(type) << " and data: " << packet_data << std::endl;
@@ -116,6 +114,8 @@ std::string Server::createPacket(const Network::PacketType& type, const std::str
     for (char c : packet_data) {
         packet_str.push_back(static_cast<uint8_t>(c));
     }
+    packet_str.push_back(static_cast<uint8_t>(';'));
+    packet_str += std::to_string(++packetNb); // Add packet number
     return packet_str;
 }
 
@@ -150,10 +150,7 @@ Network::ReqConnect Server::reqConnectData(boost::asio::ip::udp::endpoint& clien
     data.id = idClient;
     {
     std::lock_guard<std::mutex> lock(clients_mutex_);
-    if (m_running)
-        send_to_client(createPacket(Network::PacketType::GAME_STARTED, ""), client_endpoint);
-    else
-        send_to_client(createPacket(Network::PacketType::GAME_NOT_STARTED, ""), client_endpoint);
+    send_to_client(createPacket(Network::PacketType::CONNECTED, ""), client_endpoint);
     return data;
     }
 }
@@ -167,7 +164,7 @@ Network::DisconnectData Server::disconnectData(boost::asio::ip::udp::endpoint& c
         for (auto it = clients_.begin(); it != clients_.end(); ++it) {
             if (it->second.getEndpoint() == client_endpoint) {
                 data.id = it->second.getId();
-                std::cout << "[DEBUG] Client " << data.id << " disconnected." << std::endl;
+                // std::cout << "[DEBUG] Client " << data.id << " disconnected." << std::endl;
 
                 available_ids_.push(data.id);
 
@@ -192,12 +189,12 @@ bool Server::hasPositionChanged(int id, float x, float y, std::unordered_map<int
 }
 
 
-void Server::start_send_timer() {
+void Server::startSendTimer() {
     send_timer_.expires_after(std::chrono::milliseconds(1));
-    send_timer_.async_wait(boost::bind(&Server::handle_send_timer, this, boost::asio::placeholders::error));
+    send_timer_.async_wait(boost::bind(&Server::handleSendTimer, this, boost::asio::placeholders::error));
 }
 
-void Server::handle_send_timer(const boost::system::error_code& error) {
+void Server::handleSendTimer(const boost::system::error_code& error) {
     if (!error) {
         std::lock_guard<std::mutex> lock(clients_mutex_);
         if (!send_queue_.empty()) {
@@ -208,9 +205,9 @@ void Server::handle_send_timer(const boost::system::error_code& error) {
             }
         }
         // Restart the timer
-        start_send_timer();
+        startSendTimer();
     } else {
-        std::cerr << "[DEBUG] Timer error: " << error.message() << std::endl;
+        std::cerr << "[ERROR] Timer error: " << error.message() << std::endl;
     }
 }
 
@@ -226,6 +223,6 @@ void Server::sendHeartbeatMessage() {
 void Server::regulate_receive()
 {
     receive_timer_.expires_after(std::chrono::milliseconds(10)); // Set the interval to 10 milliseconds
-    receive_timer_.async_wait(boost::bind(&Server::start_receive, this));
+    receive_timer_.async_wait(boost::bind(&Server::startReceive, this));
 }
 

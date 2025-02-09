@@ -10,12 +10,12 @@
 #include <iostream>
 #include <boost/algorithm/string.hpp>
 #include <functional>
+#include <dlfcn.h>
 
 using namespace Network;
 
 // Constructor
-PacketHandler::PacketHandler(ThreadSafeQueue<Network::Packet>& queue, Server& server) : m_queue(queue), m_server(server)
-{
+PacketHandler::PacketHandler(ThreadSafeQueue<Network::Packet>& queue, Server& server, Game& game) : m_queue(queue), m_server(server), m_game(game) {
     initializeHandlers();
 }
 
@@ -45,26 +45,25 @@ void PacketHandler::initializeHandlers() {
     m_handlers[Network::PacketType::NONE] = std::bind(&PacketHandler::handleNone, this, std::placeholders::_1);
     m_handlers[Network::PacketType::REQCONNECT] = std::bind(&PacketHandler::reqConnect, this, std::placeholders::_1);
     m_handlers[Network::PacketType::DISCONNECTED] = std::bind(&PacketHandler::handleDisconnected, this, std::placeholders::_1);
+    m_handlers[Network::PacketType::CONNECTED] = std::bind(&PacketHandler::handleConnected, this, std::placeholders::_1);
     m_handlers[Network::PacketType::GAME_START] = std::bind(&PacketHandler::handleGameStart, this, std::placeholders::_1);
-    m_handlers[Network::PacketType::PLAYER_DEAD] = std::bind(&PacketHandler::handlePlayerDead, this, std::placeholders::_1);
-    m_handlers[Network::PacketType::PLAYER_JOIN] = std::bind(&PacketHandler::handlePlayerJoin, this, std::placeholders::_1);
-    m_handlers[Network::PacketType::PLAYER_SHOOT] = std::bind(&PacketHandler::handlePlayerShoot, this, std::placeholders::_1);
-    m_handlers[Network::PacketType::PLAYER_HIT] = std::bind(&PacketHandler::handlePlayerHit, this, std::placeholders::_1);
-    m_handlers[Network::PacketType::PLAYER_SCORE] = std::bind(&PacketHandler::handlePlayerScore, this, std::placeholders::_1);
-    m_handlers[Network::PacketType::ENEMY_SPAWNED] = std::bind(&PacketHandler::handleEnemySpawned, this, std::placeholders::_1);
-    m_handlers[Network::PacketType::ENEMY_DEAD] = std::bind(&PacketHandler::handleEnemyDead, this, std::placeholders::_1);
-    m_handlers[Network::PacketType::ENEMY_MOVED] = std::bind(&PacketHandler::handleEnemyMoved, this, std::placeholders::_1);
-    m_handlers[Network::PacketType::ENEMY_SHOOT] = std::bind(&PacketHandler::handleEnemyShoot, this, std::placeholders::_1);
-    m_handlers[Network::PacketType::ENEMY_LIFE_UPDATE] = std::bind(&PacketHandler::handleEnemyLifeUpdate, this, std::placeholders::_1);
-    m_handlers[Network::PacketType::MAP_UPDATE] = std::bind(&PacketHandler::handleMapUpdate, this, std::placeholders::_1);
     m_handlers[Network::PacketType::GAME_END] = std::bind(&PacketHandler::handleGameEnd, this, std::placeholders::_1);
-    m_handlers[Network::PacketType::PLAYER_RIGHT] = std::bind(&PacketHandler::handlePlayerRight, this, std::placeholders::_1);
-    m_handlers[Network::PacketType::PLAYER_LEFT] = std::bind(&PacketHandler::handlePlayerLeft, this, std::placeholders::_1);
+
     m_handlers[Network::PacketType::PLAYER_UP] = std::bind(&PacketHandler::handlePlayerUp, this, std::placeholders::_1);
     m_handlers[Network::PacketType::PLAYER_DOWN] = std::bind(&PacketHandler::handlePlayerDown, this, std::placeholders::_1);
-    m_handlers[Network::PacketType::OPEN_MENU] = std::bind(&PacketHandler::handleOpenMenu, this, std::placeholders::_1);
+    m_handlers[Network::PacketType::PLAYER_LEFT] = std::bind(&PacketHandler::handlePlayerLeft, this, std::placeholders::_1);
+    m_handlers[Network::PacketType::PLAYER_RIGHT] = std::bind(&PacketHandler::handlePlayerRight, this, std::placeholders::_1);
+
+    m_handlers[Network::PacketType::PLAYER_STOP_U] = std::bind(&PacketHandler::handlePlayerStopU, this, std::placeholders::_1);
+    m_handlers[Network::PacketType::PLAYER_STOP_D] = std::bind(&PacketHandler::handlePlayerStopD, this, std::placeholders::_1);
+    m_handlers[Network::PacketType::PLAYER_STOP_L] = std::bind(&PacketHandler::handlePlayerStopL, this, std::placeholders::_1);
+    m_handlers[Network::PacketType::PLAYER_STOP_R] = std::bind(&PacketHandler::handlePlayerStopR, this, std::placeholders::_1);
+
+
+    m_handlers[Network::PacketType::PLAYER_SHOOT] = std::bind(&PacketHandler::handlePlayerShoot, this, std::placeholders::_1);
+    m_handlers[Network::PacketType::PLAYER_BLAST] = std::bind(&PacketHandler::handlePlayerBlast, this, std::placeholders::_1);
+
     m_handlers[Network::PacketType::HEARTBEAT] = std::bind(&PacketHandler::handleHeartbeat, this, std::placeholders::_1);
-    m_handlers[Network::PacketType::GAME_START_2] = std::bind(&PacketHandler::handlePOCStart, this, std::placeholders::_1);
 }
 
 void PacketHandler::handlePacket(const Network::Packet &packet) {
@@ -98,6 +97,32 @@ void PacketHandler::handleDisconnected(const Network::Packet &packet)
     m_server.disconnectData(endpoint);
 }
 
+void PacketHandler::handleConnected(const Network::Packet &packet)
+{
+    std::lock_guard<std::mutex> lock(m_mutex);
+    std::cout << "[PacketHandler] Handled CONNECTED packet." << std::endl;
+}	
+
+typedef IGame *createGame_t(Server &server);
+
+IGame *getGameInstance(const std::string &path, Server &server)
+{
+    void *handle = dlopen(path.c_str(), RTLD_LAZY);
+    if (!handle) {
+        throw std::runtime_error(dlerror());
+    }
+    auto *createGame = (createGame_t *)dlsym(handle, "createGame");
+    const char *dlsym_error = dlerror();
+    if (dlsym_error) {
+        throw std::runtime_error(dlsym_error);
+    } if (!createGame) {
+        throw std::runtime_error(dlerror());
+    } if (handle) {
+        dlclose(handle);
+    }
+    return createGame(server);
+}
+
 void PacketHandler::handleGameStart(const Network::Packet &packet)
 {
     int numPlayers;
@@ -110,43 +135,13 @@ void PacketHandler::handleGameStart(const Network::Packet &packet)
         m_server.Broadcast(m_server.createPacket(Network::PacketType::GAME_START, ""));
     }
     std::thread gameThread([this, numPlayers] {
-        // m_game.run(numPlayers);
+        m_game.run(numPlayers);
     });
     gameThread.detach();
-}
-
-void PacketHandler::handlePOCStart(const Network::Packet &packet)
-{
-    int numPlayers;
-    {
-        std::lock_guard<std::mutex> lock(m_mutex);
-        std::cout << "[PacketHandler] Handled GAME_START_2 packet." << std::endl;
-        m_server.m_running = true;
-        const auto& clients = m_server.getClients();
-        numPlayers = clients.size();
-        m_server.Broadcast(m_server.createPacket(Network::PacketType::GAME_START_2, ""));
-    }
-    std::thread gameThread([this, numPlayers] {
-        // m_game.run(numPlayers);
-    });
-    gameThread.detach();
-}
-
-void PacketHandler::handlePlayerDead(const Network::Packet &packet)
-{
-    std::lock_guard<std::mutex> lock(m_mutex);
-    std::cout << "[PacketHandler] Handeled PLAYER_DEAD packet." << std::endl;
-}
-
-void PacketHandler::handlePlayerJoin(const Network::Packet &packet)
-{
-    std::lock_guard<std::mutex> lock(m_mutex);
-    std::cout << "[PacketHandler] Handeled PLAYER_JOIN packet." << std::endl;
 }
 
 void PacketHandler::handlePlayerShoot(const Network::Packet &packet)
 {
-    // std::lock_guard<std::mutex> lock(m_mutex);
     std::cout << "[PacketHandler] Handled PLAYER_SHOOT packet." << std::endl;
     const auto& clients = m_server.getClients();
     const udp::endpoint& clientEndpoint = m_server.getRemoteEndpoint();
@@ -164,58 +159,14 @@ void PacketHandler::handlePlayerShoot(const Network::Packet &packet)
             }
         }
     } if (found) {
-        // m_game.spawnBullet(playerId);
+        m_game.spawnBullet(playerId);
     } else {
         std::cerr << "[PacketHandler] Client endpoint not found in client list." << std::endl;
     }
 }
 
-void PacketHandler::handlePlayerHit(const Network::Packet &packet)
-{
-    std::lock_guard<std::mutex> lock(m_mutex);
-    std::cout << "[PacketHandler] Handeled PLAYER_HIT packet." << std::endl;
-}
-
-void PacketHandler::handlePlayerScore(const Network::Packet &packet)
-{
-    std::lock_guard<std::mutex> lock(m_mutex);
-    std::cout << "[PacketHandler] Handeled PLAYER_SCORE packet." << std::endl;
-}
-
-void PacketHandler::handleEnemySpawned(const Network::Packet &packet)
-{
-    std::lock_guard<std::mutex> lock(m_mutex);
-    std::cout << "[PacketHandler] Handeled ENEMY_SPAWNED packet." << std::endl;
-}
-
-void PacketHandler::handleEnemyDead(const Network::Packet &packet)
-{
-    std::lock_guard<std::mutex> lock(m_mutex);
-    std::cout << "[PacketHandler] Handeled ENEMY_DEAD packet." << std::endl;
-}
-
-void PacketHandler::handleEnemyMoved(const Network::Packet &packet)
-{
-    std::lock_guard<std::mutex> lock(m_mutex);
-    std::cout << "[PacketHandler] Handeled ENEMY_MOVED packet." << std::endl;
-}
-
-void PacketHandler::handleEnemyShoot(const Network::Packet &packet)
-{
-    std::lock_guard<std::mutex> lock(m_mutex);
-    std::cout << "[PacketHandler] Handeled ENEMY_SHOOT packet." << std::endl;
-}
-
-void PacketHandler::handleEnemyLifeUpdate(const Network::Packet &packet)
-{
-    std::lock_guard<std::mutex> lock(m_mutex);
-    std::cout << "[PacketHandler] Handeled ENEMY_LIFE_UPDATE packet." << std::endl;
-}
-
-void PacketHandler::handleMapUpdate(const Network::Packet &packet)
-{
-    std::lock_guard<std::mutex> lock(m_mutex);
-    std::cout << "[PacketHandler] Handeled MAP_UPDATE packet." << std::endl;
+void PacketHandler::handlePlayerBlast(const Network::Packet & packet) {
+    std::cout << "[PacketHandler] Handled PLAYER_BLAST packet." << std::endl;  
 }
 
 void PacketHandler::handleGameEnd(const Network::Packet &packet)
@@ -224,33 +175,52 @@ void PacketHandler::handleGameEnd(const Network::Packet &packet)
     std::cout << "[PacketHandler] Handeled GAME_END packet." << std::endl;
 }
 
-void PacketHandler::handlePlayerRight(const Network::Packet &packet)
-{
-    std::cout << "[PacketHandler] Handeled PLAYER_RIGHT packet." << std::endl;
-    handlePlayerAction(packet, 2);
-}
-
-void PacketHandler::handlePlayerLeft(const Network::Packet &packet)
-{
-    std::cout << "[PacketHandler] Handeled PLAYER_LEFT packet." << std::endl;
-    handlePlayerAction(packet, 1);
-}
-
 void PacketHandler::handlePlayerUp(const Network::Packet &packet)
 {
     std::cout << "[PacketHandler] Handled PLAYER_UP packet." << std::endl;
-    handlePlayerAction(packet, 3);
+    handlePlayerAction(packet, Network::PacketType::PLAYER_UP);
 }
 
 void PacketHandler::handlePlayerDown(const Network::Packet &packet)
 {
     std::cout << "[PacketHandler] Handeled PLAYER_DOWN packet." << std::endl;
-    handlePlayerAction(packet, 4);
+    handlePlayerAction(packet, Network::PacketType::PLAYER_DOWN);
 }
 
-void PacketHandler::handleOpenMenu(const Network::Packet &packet)
+void PacketHandler::handlePlayerLeft(const Network::Packet &packet)
 {
-    std::cout << "[PacketHandler] Handeled OPEN_MENU packet." << std::endl;
+    std::cout << "[PacketHandler] Handeled PLAYER_LEFT packet." << std::endl;
+    handlePlayerAction(packet, Network::PacketType::PLAYER_LEFT);
+}
+
+void PacketHandler::handlePlayerRight(const Network::Packet &packet)
+{
+    std::cout << "[PacketHandler] Handeled PLAYER_RIGHT packet." << std::endl;
+    handlePlayerAction(packet, Network::PacketType::PLAYER_RIGHT);
+}
+
+void PacketHandler::handlePlayerStopU(const Network::Packet &packet)
+{
+    std::cout << "[PacketHandler] Handeled STOP packet." << std::endl;
+    handlePlayerAction(packet, Network::PacketType::PLAYER_STOP_U);
+}
+
+void PacketHandler::handlePlayerStopD(const Network::Packet &packet)
+{
+    std::cout << "[PacketHandler] Handeled STOP packet." << std::endl;
+    handlePlayerAction(packet, Network::PacketType::PLAYER_STOP_D);
+}
+
+void PacketHandler::handlePlayerStopL(const Network::Packet &packet)
+{
+    std::cout << "[PacketHandler] Handeled STOP packet." << std::endl;
+    handlePlayerAction(packet, Network::PacketType::PLAYER_STOP_L);
+}
+
+void PacketHandler::handlePlayerStopR(const Network::Packet &packet)
+{
+    std::cout << "[PacketHandler] Handeled STOP packet." << std::endl;
+    handlePlayerAction(packet, Network::PacketType::PLAYER_STOP_R);
 }
 
 void PacketHandler::handleHeartbeat(const Network::Packet &packet) {
@@ -258,7 +228,7 @@ void PacketHandler::handleHeartbeat(const Network::Packet &packet) {
     m_server.sendHeartbeatMessage();
 }
 
-void PacketHandler::handlePlayerAction(const Network::Packet &packet, int action)
+void PacketHandler::handlePlayerAction(const Network::Packet &packet, Network::PacketType action)
 {
     {
         std::lock_guard<std::mutex> lock(m_server.clients_mutex_);
@@ -267,7 +237,7 @@ void PacketHandler::handlePlayerAction(const Network::Packet &packet, int action
             return;
         }
     }
-    std::cout << "[PacketHandler] Handling player action: " << action << std::endl;
+    std::cout << "[PacketHandler] Handling player action: " << static_cast<int>(action) << std::endl;
     const auto& clients = m_server.getClients();
     const udp::endpoint& clientEndpoint = m_server.getRemoteEndpoint();
 
@@ -285,7 +255,8 @@ void PacketHandler::handlePlayerAction(const Network::Packet &packet, int action
         }
     }
     if (found) {
-        // m_game.addPlayerAction(playerId, action);
+        std::cout << "[PacketHandler] Adding player action to queue." << std::endl;
+        m_game.addPlayerAction(playerId, static_cast<int>(action));
     } else {
         std::cerr << "[PacketHandler] Client endpoint not found in client list." << std::endl;
     }

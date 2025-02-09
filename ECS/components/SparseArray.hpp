@@ -1,10 +1,17 @@
-#ifndef SPARSEARRAY_H
-#define SPARSEARRAY_H
+/*
+** EPITECH PROJECT, 2024
+** R-Type ECS
+** File description:
+** Sparse Array
+*/
 
-#include <vector>
-#include <optional>
-#include <memory>
-#include <algorithm>
+#ifndef SPARSEARRAY_H
+    #define SPARSEARRAY_H
+
+    #include <vector>
+    #include <optional>
+    #include <memory>
+    #include <algorithm>
 
 template <typename Component>
 class sparse_array {
@@ -84,12 +91,8 @@ public:
         return -1;
     }
 
-    bool contains(size_type index) const {
-        return index < _data.size() && _data[index].has_value();
-    }
-
 private:
     container_t _data;
 };
 
-#endif // SPARSEARRAY_H
+#endif //SPARSEARRAY_H

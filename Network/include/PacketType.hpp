@@ -15,38 +15,29 @@ namespace Network {
     enum class PacketType {
         NONE = 0,
         REQCONNECT = 1,
-        DISCONNECTED = 2,
-        GAME_START = 3,
-        PLAYER_DEAD = 4,
-        PLAYER_JOIN = 5,
-        PLAYER_SHOOT = 6,
-        PLAYER_HIT = 7,
-        PLAYER_SCORE = 8,
-        ENEMY_SPAWNED = 9,
-        ENEMY_DEAD = 10,
-        ENEMY_MOVED = 11,
-        ENEMY_SHOOT = 12,
-        ENEMY_LIFE_UPDATE = 13,
-        MAP_UPDATE = 14,
-        GAME_END = 15,      //
-        PLAYER_RIGHT = 16,  //no pos
-        PLAYER_LEFT = 17,   //no pos
-        PLAYER_UP = 18,     //no pos
-        PLAYER_DOWN = 19,   //no pos
-        OPEN_MENU = 20,     //no pos
-        MOUSE_CLICK = 21,   //pos
-        CREATE_ENEMY = 22,
-        CREATE_BOSS = 23,
-        CREATE_PLAYER = 24,
-        CREATE_BULLET = 25,
-        BACKGROUND = 26,
-        CREATE_POWERUP = 27,
-        DELETE = 28,
-        CHANGE = 29,
-        GAME_STARTED = 30,
-        GAME_NOT_STARTED = 31,
-        UI_UPDATE = 32,
-        HEARTBEAT = 33,
-        GAME_START_2 = 34,
+        CONNECTED = 2,
+        DISCONNECTED = 3,
+        GAME_START = 4,
+        GAME_END = 5,
+        KILL = 6,
+        CHANGE = 7,
+        
+        PLAYER_CREATE = 10,
+        ENEMY_CREATE = 11,
+        BULLET_CREATE = 12,
+        BOSS_CREATE = 13,
+
+        PLAYER_UP = 20,
+        PLAYER_DOWN = 21,
+        PLAYER_LEFT = 22,
+        PLAYER_RIGHT = 23,
+        PLAYER_STOP_U = 24,
+        PLAYER_STOP_D = 25,
+        PLAYER_STOP_L = 26,
+        PLAYER_STOP_R = 27,
+        PLAYER_SHOOT = 28,
+        PLAYER_BLAST = 29,
+        
+        HEARTBEAT = 99,
     };
 }

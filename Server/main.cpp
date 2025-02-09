@@ -30,12 +30,9 @@ void runServer(short port) {
         ThreadSafeQueue<Network::Packet> packetQueue;
 
         Server server(io_context, port, packetQueue);
+        Game game(&server);
 
-        // GameState game(&server);
-
-        // server.setGameState(&game);
-
-        Network::PacketHandler packetHandler(packetQueue, server);
+        Network::PacketHandler packetHandler(packetQueue, server, game);
         packetHandler.start();
 
         std::cout << "Server started\nListening on UDP port " << port << std::endl;
@@ -47,7 +44,7 @@ void runServer(short port) {
         if (serverThread.joinable())
             serverThread.join();
 
-        packetHandler.stop();
+        // packetHandler.stop();
     } catch (const boost::system::system_error& e) {
         if (e.code() == boost::asio::error::access_denied) {
             throw RType::PermissionDeniedException("Permission denied");

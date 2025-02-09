@@ -28,7 +28,7 @@ set(ECS_SOURCES
 )
 
 # Add ECS library
-add_library(ECSLib INTERFACE)
+add_library(ECS INTERFACE)
 
 # Include directories for the ECS library
-target_include_directories(ECSLib INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories(ECS INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})

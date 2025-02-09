@@ -13,17 +13,15 @@ set(SERVER_BINARY "r-type_server")
 add_definitions(-DBOOST_BIND_GLOBAL_PLACEHOLDERS)
 
 include_directories(
-    # ${CMAKE_SOURCE_DIR}/GameEngine/include
-    # ${CMAKE_SOURCE_DIR}/BeeR-Type/include/
-    ${CMAKE_SOURCE_DIR}/Network
     ${CMAKE_SOURCE_DIR}/Network/include
-    ${CMAKE_SOURCE_DIR}/Server/
     ${CMAKE_SOURCE_DIR}/Server/include/
     ${CMAKE_SOURCE_DIR}/ECS/
     ${CMAKE_SOURCE_DIR}/ECS/systems/
     ${CMAKE_SOURCE_DIR}/ECS/components/
     ${CMAKE_SOURCE_DIR}/Server/Errors/
     ${CMAKE_SOURCE_DIR}/Client/include/
+    ${CMAKE_SOURCE_DIR}/GameEngine/include/
+    ${CMAKE_SOURCE_DIR}/R-Type/include/
 )
 
 # --- Subdirectories ---
@@ -31,8 +29,8 @@ add_subdirectory(ECS)
 add_subdirectory(Network)
 add_subdirectory(Client)
 add_subdirectory(Server)
-# add_subdirectory(GameEngine)
-# add_subdirectory(BeeR-Type)
+add_subdirectory(GameEngine)
+add_subdirectory(R-Type)
 
 # --- FetchContent setup ---
 include(FetchContent)
@@ -49,6 +47,7 @@ FetchContent_Declare(
     URL https://github.com/boostorg/boost/releases/download/boost-1.83.0/boost-1.83.0.zip
     DOWNLOAD_NAME boost_1_83_0.zip
     DOWNLOAD_NO_PROGRESS TRUE
+        DOWNLOAD_EXTRACT_TIMESTAMP TRUE
 )
 # Which Boost sub-libraries to build (adjust as needed)
 set(BOOST_INCLUDE_LIBRARIES
@@ -93,17 +92,21 @@ target_link_libraries(SFML INTERFACE
 
 # Add executables for client/server "main.cpp"
 # Client main
-add_executable(r-type_client Client/main.cpp)
+add_executable(r-type_client Client/main.cpp
+        ECS/Initialization.hpp)
 target_link_libraries(r-type_client
-    ClientLib
+    Client
     Boost::Boost
     SFML::SFML
 )
 
 # Server main
-add_executable(r-type_server Server/main.cpp)
+add_executable(r-type_server Server/main.cpp
+        ECS/Initialization.hpp)
 target_link_libraries(r-type_server
-    ServerLib
+    Server
     Boost::Boost
     SFML::SFML
+    GameEngine
+    R-Type
 )

@@ -1,12 +1,12 @@
-#ifndef BOSS_HPP
-    #define BOSS_HPP
+#ifndef ENEMY_HPP
+#define ENEMY_HPP
 
 #include "Registry.hpp"
 
-class Boss {
+class Enemy {
 public:
-    Boss(Registry registry, float x, float y);
-    ~Boss();
+    Enemy(Registry& registry, float x, float y);
+    ~Enemy();
 
     void move(float x, float y);
     Registry::Entity getEntity() const;
@@ -15,8 +15,8 @@ public:
     void setRegistry(const Registry& newRegistry);
 
 private:
-    Registry registry;
+    Registry& registry;
     Registry::Entity entity;
 };
 
-#endif //BOSS_HPP
+#endif // ENEMY_HPP

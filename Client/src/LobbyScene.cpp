@@ -5,7 +5,13 @@ LobbyScene::LobbyScene(sf::RenderWindow& window, Client& client)
     : Scene(window, client)
 {
     loadAssets();
-    initLobbySprites();
+}
+
+LobbyScene::~LobbyScene() {
+    player_texts_.clear();
+    scenes_.clear();
+    buttons_.clear();
+    icons_.clear();
 }
 
 void LobbyScene::loadAssets() {
@@ -13,7 +19,8 @@ void LobbyScene::loadAssets() {
         std::cerr << "[ERROR] Failed to load font" << std::endl;
     }
     textures_[SpriteType::LobbyBackground].loadFromFile("../assets/lobby_background.png");
-    textures_[SpriteType::StartButton].loadFromFile("../assets/play_button.png");
+    textures_[SpriteType::GameStart1].loadFromFile("../assets/play_button.png");
+    textures_[SpriteType::GameStart2].loadFromFile("../assets/play_button.png");
     textures_[SpriteType::PlayerIcon].loadFromFile("../assets/player_icon.png");
 }
 
@@ -34,12 +41,12 @@ void LobbyScene::initLobbySprites() {
 
     // Position start buttons in the middle of the screen
     SpriteElement buttonElement1;
-    buttonElement1.sprite.setTexture(textures_[SpriteType::StartButton]);
-    buttonElement1.sprite.setPosition((window.getSize().x / 2) - textures_[SpriteType::StartButton].getSize().x - 10, 20);
+    buttonElement1.sprite.setTexture(textures_[SpriteType::GameStart1]);
+    buttonElement1.sprite.setPosition((window.getSize().x / 2) - textures_[SpriteType::GameStart1].getSize().x - 10, 20);
     buttonElement1.id = -101;
 
     SpriteElement buttonElement2;
-    buttonElement2.sprite.setTexture(textures_[SpriteType::StartButton]);
+    buttonElement2.sprite.setTexture(textures_[SpriteType::GameStart2]);
     buttonElement2.sprite.setPosition((window.getSize().x / 2) + 10, 20);
     buttonElement2.id = -102;
 
@@ -53,7 +60,7 @@ void LobbyScene::initLobbySprites() {
         playerElement.sprite.setScale(0.40f, 0.40f);
         playerElement.sprite.setPosition(50 + i * (playerElement.sprite.getGlobalBounds().width + 20), window.getSize().y - playerElement.sprite.getGlobalBounds().height - 50);
         playerElement.id = i;
-        players_[i] = playerElement;
+        icons_[i] = playerElement;
 
         sf::Text playerText;
         playerText.setFont(font_);
@@ -75,13 +82,22 @@ void LobbyScene::processEvents() {
         } else if (event.type == sf::Event::MouseButtonPressed) {
             sf::Vector2i mousePos = sf::Mouse::getPosition(window);
             if (buttons_.find(-101) != buttons_.end() && buttons_[-101].sprite.getGlobalBounds().contains(mousePos.x, mousePos.y)) {
-                client.send(client.createPacket(Network::PacketType::GAME_START)); // Call createPacket correctly
+                client.send_queue_.push(client.createPacket(Network::PacketType::GAME_START));
                 buttons_.erase(-101);
             } if (buttons_.find(-102) != buttons_.end() && buttons_[-102].sprite.getGlobalBounds().contains(mousePos.x, mousePos.y)) {
-                client.send(client.createPacket(Network::PacketType::GAME_START_2)); // Call createPacket correctly
+                client.send_queue_.push(client.createPacket(Network::PacketType::GAME_START));
                 buttons_.erase(-102);
             }
         }
+    }
+}
+
+void LobbyScene::handleServerActions() {
+    switch (client.action) {
+        case static_cast<int>(Network::PacketType::GAME_START):
+            std::cout<<"Switching to GameScene"<<std::endl;
+            client.switchScene(SceneType::Game);
+            break;
     }
 }
 
@@ -89,6 +105,7 @@ void LobbyScene::update() {
     numClients_ = client.getNumClients();
     updatePing(); // Update the ping text
     initLobbySprites();
+    // handleServerActions();
 }
 
 void LobbyScene::render() {
@@ -100,7 +117,7 @@ void LobbyScene::render() {
     for (const auto& button : buttons_) {
         window.draw(button.second.sprite);
     }
-    for (const auto& player : players_) {
+    for (const auto& player : icons_) {
         window.draw(player.second.sprite);
     }
     for (const auto& text : player_texts_) {
