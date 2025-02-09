@@ -15,6 +15,7 @@
 
 class GameScene : public Scene {
 public:
+
     GameScene(sf::RenderWindow& window, Client& client);
     ~GameScene();
     void run(sf::RenderWindow& window, Client& client);

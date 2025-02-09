@@ -8,21 +8,15 @@
 #include "PositionSystem.hpp"
 #include "CollisionSystem.hpp"
 #include "ProjectileSystem.hpp"
+#include "Initialization.hpp"
 #include <iostream>
 #include <thread>
 
 Game::Game(Server* server)
     : AGame(server), rng(std::random_device()()), distX(0.0f, 800.0f), distY(0.0f, 600.0f),
       distTime(1000, 5000), currentWave(0), enemiesPerWave(5), server_(server) {
-    registry.register_component<Position>();
-    registry.register_component<Velocity>();
-    registry.register_component<Controllable>();
-    registry.register_component<Collidable>();
-    registry.register_component<Projectile>();
-
-    registry.add_system<Position, Velocity>(positionSystem);
-    registry.add_system<Position, Velocity, Projectile, Collidable>(projectileSystem);
-    }
+    initializeECS(registry, false);
+}
 
 Game::~Game() {
     enemies.clear();

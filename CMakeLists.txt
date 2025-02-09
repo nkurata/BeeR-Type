@@ -47,6 +47,7 @@ FetchContent_Declare(
     URL https://github.com/boostorg/boost/releases/download/boost-1.83.0/boost-1.83.0.zip
     DOWNLOAD_NAME boost_1_83_0.zip
     DOWNLOAD_NO_PROGRESS TRUE
+        DOWNLOAD_EXTRACT_TIMESTAMP TRUE
 )
 # Which Boost sub-libraries to build (adjust as needed)
 set(BOOST_INCLUDE_LIBRARIES
@@ -91,7 +92,8 @@ target_link_libraries(SFML INTERFACE
 
 # Add executables for client/server "main.cpp"
 # Client main
-add_executable(r-type_client Client/main.cpp)
+add_executable(r-type_client Client/main.cpp
+        ECS/Initialization.hpp)
 target_link_libraries(r-type_client
     Client
     Boost::Boost
@@ -99,7 +101,8 @@ target_link_libraries(r-type_client
 )
 
 # Server main
-add_executable(r-type_server Server/main.cpp)
+add_executable(r-type_server Server/main.cpp
+        ECS/Initialization.hpp)
 target_link_libraries(r-type_server
     Server
     Boost::Boost

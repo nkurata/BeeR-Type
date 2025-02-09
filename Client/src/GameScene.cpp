@@ -8,6 +8,7 @@
 #include "ControlSystem.hpp"
 #include "PacketType.hpp"
 #include <iostream>
+#include "Initialization.hpp"
 
 GameScene::GameScene(sf::RenderWindow& window, Client& client)
     : Scene(window, client), window_(window), client_(client)
@@ -15,16 +16,7 @@ GameScene::GameScene(sf::RenderWindow& window, Client& client)
     std::cout << "[DEBUG] GameScene constructor called" << std::endl;
 
     initBackground();
-    // Register systems
-    registry_.register_component<Position>();
-    registry_.register_component<Velocity>();
-    registry_.register_component<Drawable>();
-    registry_.register_component<Controllable>();
-    registry_.add_system<Position, Velocity>(positionSystem);
-    registry_.add_system<Velocity, Controllable>(controlSystem);
-    registry_.add_system<Position, Drawable>([this](Registry& registry, sparse_array<Position>& positions, sparse_array<Drawable>& drawables) {
-        drawSystem(registry, window_, positions, drawables);
-    });
+    initializeECS(registry_, true, &window);
     window.setKeyRepeatEnabled(false);
 }
 
@@ -56,7 +48,7 @@ void GameScene::processEvents() {
 
 void GameScene::handleKeyPress(sf::Keyboard::Key key) {
     const auto& player = players_[client.server_id];
-    auto& ctrl = registry_.get_components<Controllable>()[player->getEntity()];
+    auto ctrl = registry_.get_components<Controllable>()[player->getEntity()];
 
     switch (key) {
         case sf::Keyboard::Right:
@@ -88,7 +80,8 @@ void GameScene::handleKeyPress(sf::Keyboard::Key key) {
 
 void GameScene::handleKeyUnpress(sf::Keyboard::Key key) {
     const auto& player = players_[client.server_id];
-    auto& ctrl = registry_.get_components<Controllable>()[player->getEntity()];
+    const auto &entity = player->getEntity();
+    auto& ctrl = registry_.get_components<Controllable>()[entity];
 
     switch (key) {
         case sf::Keyboard::Right:
@@ -132,7 +125,7 @@ void GameScene::handleServerActions() {
             break;
         case static_cast<int>(Network::PacketType::PLAYER_SHOOT):
             std::cout << "Shoot received" << client.new_x << client.new_y << std::endl;
-            bullets_.emplace_back(new Bullet(registry_, client.new_x, client.new_y, 0.5f));
+            bullets_.emplace_back(std::make_unique<Bullet>(registry_, client.new_x, client.new_y, 4.f, 1.0f, 0.0f));
             break;
         case static_cast<int>(Network::PacketType::PLAYER_BLAST):
             std::cout << "Blast received" << std::endl;
