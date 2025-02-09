@@ -40,6 +40,8 @@ class Client {
         void startSendTimer();
         void handleSendTimer(const boost::system::error_code& error);
         void regulate_receive();
+        void startResetTimer();
+        void handleResetTimer(const boost::system::error_code& error);
         // Packet Handling
         std::string createPacket(Network::PacketType type);
         std::string createMousePacket(Network::PacketType type, int x = 0, int y = 0);
@@ -55,6 +57,7 @@ class Client {
         int action;
         int server_id;
         float new_x = 0.0, new_y = 0.0;
+        int packetLost = 0;
         std::queue<std::string> send_queue_;
 
     private:
@@ -73,13 +76,14 @@ class Client {
         boost::asio::io_context& io_context_;
         boost::asio::steady_timer send_timer_;
         boost::asio::steady_timer receive_timer_;
+        boost::asio::steady_timer reset_timer_;
         std::function<void(const std::string&)> receive_callback_;
 
         int numClients_;
         double ping_ = 0.0;
         int packetSent = 0;
         int packetReceived = 0;
-        int packetLost = 0; 
+        int lastPacketnb = 0;
         std::chrono::high_resolution_clock::time_point heartBeatStart_;
         std::chrono::time_point<std::chrono::high_resolution_clock> lastHeartbeatTime_;
 

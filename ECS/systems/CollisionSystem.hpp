@@ -1,6 +1,7 @@
 #ifndef COLLISIONSYSTEM_H
     #define COLLISIONSYSTEM_H
 
+
 #include "Registry.hpp"
 #include "Position.hpp"
 #include "Collidable.hpp"
@@ -27,11 +28,13 @@ inline std::vector<std::pair<size_t, size_t>> collisionSystem(Registry& registry
                 auto& otherCollidable = collidables[j];
                 if (otherPos && otherCollidable && otherCollidable->is_collidable) {
                     if (checkCollision(*pos, collidable->hitbox, *otherPos, otherCollidable->hitbox)) {
+                        std::cout << "Collision detected between entity " << i << " and entity " << j << std::endl;
                         collisions.emplace_back(i, j); // Record collision
                         if (controllables[i] || controllables[j]) {
                             registry.kill_entity(controllables[i] ? i : j);
                         }
                         if (projectiles[i] || projectiles[j]) {
+                            std::cout << "Projectile collision: killing entities " << i << " and " << j << std::endl;
                             registry.kill_entity(projectiles[i] ? j : i);
                             registry.kill_entity(projectiles[i] ? i : j);
                         } else {

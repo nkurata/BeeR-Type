@@ -25,6 +25,7 @@ public:
     void updatePing();
     void addChatLog(const std::string& message);
     void renderOverlay();
+    void packetLoss();
 
 protected:
     sf::RenderWindow& window;

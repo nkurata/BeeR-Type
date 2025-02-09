@@ -17,9 +17,6 @@ public:
         registry.add_component<Drawable>(entity, {"../assets/enemy.png"});
     }
 
-    ~Enemy() {
-        registry.kill_entity(entity);
-    }
 
     Registry::Entity getEntity() const {
         return entity;

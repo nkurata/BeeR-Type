@@ -104,8 +104,7 @@ Network::Packet Server::deserializePacket(const std::string& packet_str)
     return packet;
 }
 
-std::string Server::createPacket(const Network::PacketType& type, const std::string& data)
-{
+std::string Server::createPacket(const Network::PacketType& type, const std::string& data) {
     std::string packet_str;
     std::string packet_data = data.empty() ? "-1;-1;-1" : data;
     std::cout << "[DEBUG] Creating packet with type: " << static_cast<int>(type) << " and data: " << packet_data << std::endl;
@@ -115,6 +114,8 @@ std::string Server::createPacket(const Network::PacketType& type, const std::str
     for (char c : packet_data) {
         packet_str.push_back(static_cast<uint8_t>(c));
     }
+    packet_str.push_back(static_cast<uint8_t>(';'));
+    packet_str += std::to_string(++packetNb); // Add packet number
     return packet_str;
 }
 

@@ -14,21 +14,18 @@
 #include "Velocity.hpp"
 #include <iostream>
 
-inline void projectileSystem(Registry& registry, sparse_array<Position>& positions, sparse_array<Velocity>& velocities, sparse_array<Projectile>& projectiles, std::vector<size_t>& bullets) {
+inline void projectileSystem(Registry& registry, sparse_array<Position>& positions, sparse_array<Velocity>& velocities, sparse_array<Projectile>& projectiles) {
     for (size_t i = 0; i < projectiles.size(); ++i) {
-        const auto& proj = projectiles[i];
-        if (proj) {
+        if (const auto& proj = projectiles[i]) {
             auto& pos = positions[i];
             const auto& vel = velocities[i];
             if (pos && vel) {
                 pos->x += vel->vx * proj->speed;
                 pos->y += vel->vy * proj->speed;
                 std::cout << "Projectile " << i << " position: (" << pos->x << ", " << pos->y << ")" << std::endl;
-                if (pos->x > 800) {
+                if (pos->x > 1280) {
                     std::cout << "Killing entity " << i << std::endl;
                     registry.kill_entity(i);
-                    bullets.push_back(i);
-
                 }
             }
         }

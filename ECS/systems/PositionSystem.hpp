@@ -21,8 +21,6 @@ inline void positionSystem(Registry& registry, sparse_array<Position>& positions
         if (pos && vel) {
             pos->x += vel->vx;
             pos->y += vel->vy;
-        } else {
-            std::cout << "[DEBUG] Missing component for entity " << i << std::endl;
         }
     }
 }

@@ -30,16 +30,20 @@ private:
     void handleServerActions();
 
 
-    std::unordered_map<int, std::unique_ptr<Player>> players_;
-    std::vector<std::unique_ptr<Enemy>> enemies_;
-    std::vector<std::unique_ptr<Boss>> bosses_;
-    std::vector<std::unique_ptr<Bullet>> bullets_;
+    std::unordered_map<int, std::unique_ptr<Player>> players;
+    std::unordered_map<int, std::unique_ptr<Enemy>> enemies;
+    std::unordered_map<int, std::unique_ptr<Boss>> bosses;
+    std::unordered_map<int, std::unique_ptr<Bullet>> bullets;
+
     Registry registry_;
     sf::Sprite backgroundSprite;
     sf::Texture backgroundTexture;
     std::vector<sf::Text> gameTexts_;
     sf::RenderWindow& window_;
     Client& client_;
+    int bossId = 0;
+    int enemyId = 0;
+    int bulletId = 0;
 };
 
 #endif // GAME_SCENE_HPP

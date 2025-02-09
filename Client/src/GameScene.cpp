@@ -47,8 +47,8 @@ void GameScene::processEvents() {
 }
 
 void GameScene::handleKeyPress(sf::Keyboard::Key key) {
-    const auto& player = players_[client.server_id];
-    auto ctrl = registry_.get_components<Controllable>()[player->getEntity()];
+    const auto& entity = players[client.server_id]->getEntity();
+    auto ctrl = registry_.get_components<Controllable>()[entity];
 
     switch (key) {
         case sf::Keyboard::Right:
@@ -79,7 +79,7 @@ void GameScene::handleKeyPress(sf::Keyboard::Key key) {
 }
 
 void GameScene::handleKeyUnpress(sf::Keyboard::Key key) {
-    const auto& player = players_[client.server_id];
+    const auto& player = players[client.server_id];
     const auto &entity = player->getEntity();
     auto& ctrl = registry_.get_components<Controllable>()[entity];
 
@@ -107,7 +107,7 @@ void GameScene::handleKeyUnpress(sf::Keyboard::Key key) {
 
 
 void GameScene::handleServerActions() {
-    const auto& player = players_[client.server_id];
+    const auto& player = players[client.server_id];
 
     switch (client.action) {
         case static_cast<int>(Network::PacketType::PLAYER_STOP_U):
@@ -124,23 +124,23 @@ void GameScene::handleServerActions() {
             player->setPosition(client.new_x, client.new_y);
             break;
         case static_cast<int>(Network::PacketType::PLAYER_SHOOT):
-            std::cout << "Shoot received" << client.new_x << client.new_y << std::endl;
-            bullets_.emplace_back(std::make_unique<Bullet>(registry_, client.new_x, client.new_y, 4.f, 1.0f, 0.0f));
+            bullets.emplace(bulletId, std::make_unique<Bullet>(registry_, client.new_x, client.new_y, 4.f, 1.0f, 0.0f));
+            bulletId++;
             break;
         case static_cast<int>(Network::PacketType::PLAYER_BLAST):
-            std::cout << "Blast received" << std::endl;
             break;
         case static_cast<int>(Network::PacketType::PLAYER_CREATE):
-            if (players_.find(client.server_id) == players_.end()) {
-                players_.emplace(client.server_id, std::make_unique<Player>(registry_, client.new_x, client.new_y));
+            std::cout << "Player " << client.server_id << " spawned at: " << client.new_x << ", " << client.new_y << std::endl;
+            if (players.find(client.server_id) == players.end()) {
+                players.emplace(client.server_id, std::make_unique<Player>(registry_, client.new_x, client.new_y));
             }
             break;
         case static_cast<int>(Network::PacketType::ENEMY_CREATE):
-            enemies_.emplace_back(new Enemy(registry_, client.new_x, client.new_y));
+            enemies.emplace(enemyId, std::make_unique<Enemy>(registry_, client.new_x, client.new_y));
+            enemyId++;
             break;
         case static_cast<int>(Network::PacketType::BOSS_CREATE):
-            bosses_.emplace_back(new Boss(registry_, client.new_x, client.new_y));
-            break;
+        break;
         default:
             break;
     }
@@ -158,6 +158,6 @@ void GameScene::render() {
     window.draw(backgroundSprite);
 
     drawSystem(registry_, window_, registry_.get_components<Position>(), registry_.get_components<Drawable>());
-
+    renderOverlay();
     window.display();
 }

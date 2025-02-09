@@ -14,20 +14,17 @@
 
 Game::Game(Server* server)
     : AGame(server), rng(std::random_device()()), distX(0.0f, 800.0f), distY(0.0f, 600.0f),
-      distTime(1000, 5000), currentWave(0), enemiesPerWave(5), server_(server) {
+      distTime(1000, 5000), currentWave(0), enemiesPerWave(5), server_(server), enemyId(0), bossId(0) {
     initializeECS(registry, false);
 }
 
 Game::~Game() {
-    enemies.clear();
-    bosses.clear();
 }
 
 void Game::update() {
     while (true) {
         registry.run_systems();
         processPlayerActions();
-        //update bullet position
         //wave spawning
         //update enemy position
     }
@@ -80,7 +77,6 @@ void Game::processPlayerActions() {
                 spawnBullet(playerId);
                 break;
             case static_cast<int>(Network::PacketType::PLAYER_BLAST):
-                spawnBlast(playerId);
                 break;
             default:
                 break;
@@ -94,12 +90,14 @@ void Game::run(int numPlayers) {
     for (int i = 0; i < numPlayers; ++i) {
         spawnPlayer(i, 100, (i * 100));
     }
+    spawnEnemy(300.0f, 300.0f);
+    spawnEnemy(400.0f, 400.0f);
     update();
 }
 
 // Player functions
 void Game::spawnPlayer(int playerId, float x, float y) {
-    players.emplace(playerId, new Player(registry, x, y));
+    players.emplace(playerId, std::make_unique<Player>(registry, x, y));
 
     std::string data = std::to_string(playerId) + ";" + std::to_string(x) + ";" + std::to_string(y);
     std::cout << "Player " << playerId << " spawned at: " << x << ", " << y << std::endl;
@@ -124,32 +122,29 @@ void Game::killPlayers(int entityId) {
 
 // Enemy functions
 void Game::spawnEnemy(float x, float y) {
-    enemies.emplace_back(new Enemy(registry, x, y));
+    enemies.emplace(enemyId, std::make_unique<Enemy>(registry, x, y));
 
-    std::string data = enemies.back()->getEntity() + ";" + std::to_string(x) + ";" + std::to_string(y);
-    std::cout << "Enemy " << enemies.back()->getEntity() << " spawned at: " << x << ", " << y << std::endl;
+    std::string data = std::to_string(enemyId) + ";" + std::to_string(x) + ";" + std::to_string(y);
+    std::cout << "Enemy " << std::to_string(enemyId) << " spawned at: " << x << ", " << y << std::endl;
     server_->Broadcast(server_->createPacket(Network::PacketType::ENEMY_CREATE, data));
 }
 
 // Bullet functions
 void Game::spawnBullet(int playerId) {
-    auto& player = players[playerId];
-    std::string data = player->playerShoot();
+    bullets.emplace(bulletId, std::make_unique<Bullet>(registry, 4.f, 1.0f, 0.0f));
+    bulletId++;
+    const auto& playerPosition = registry.get_components<Position>()[players[playerId]->getEntity()];
+    std::string data = std::to_string(playerId) + ";" + std::to_string(playerPosition->x) + ";" + std::to_string(playerPosition->y);
     server_->Broadcast(server_->createPacket(Network::PacketType::PLAYER_SHOOT, data));
-}
-
-void Game::spawnBlast(int playerId) {
-    auto& player = players[playerId];
-    std::string data = player->playerBlast();
-    server_->Broadcast(server_->createPacket(Network::PacketType::PLAYER_BLAST, data));
 }
 
 // Boss functions
 void Game::spawnBoss(float x, float y) {
-    bosses.emplace_back(new Boss(registry, x, y));
+    bosses.emplace(bossId, std::make_unique<Boss>(registry, x, y));
 
-    std::string data = bosses.back()->getEntity() + ";" + std::to_string(x) + ";" + std::to_string(y);
-    std::cout << "Boss " << bosses.back()->getEntity() << " spawned at: " << x << ", " << y << std::endl;
+    std::string data = std::to_string(bossId) + ";" + std::to_string(x) + ";" + std::to_string(y);
+    std::cout << "Boss " << std::to_string(bossId) << " spawned at: " << x << ", " << y << std::endl;
+    bossId++;
     server_->Broadcast(server_->createPacket(Network::PacketType::BOSS_CREATE, data));
 }
 

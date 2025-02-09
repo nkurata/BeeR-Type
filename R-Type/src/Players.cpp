@@ -81,29 +81,3 @@ void Player::printPosition() {
         std::cout << "Player position: " << pos->x << ", " << pos->y << std::endl;
     }
 }
-
-std::string Player::playerShoot() {
-    const auto &playerPosition = registry.get_components<Position>()[entity];
-    if (!playerPosition.has_value()) {
-        throw std::runtime_error("Position component not found for entity");
-    }
-    const float x = playerPosition->x;
-    const float y = playerPosition->y;
-    std::cout << "[DEBUG] Player shot from " << x << ", " << y << std::endl;
-    bullets_.emplace_back(new Bullet(registry, x, y, 4.f));
-    return std::to_string(bullets_.back()->getEntity()) + ";" + std::to_string(x) + ";" + std::to_string(y);
-}
-
-std::string Player::playerBlast () {
-    auto &playerPosition = registry.get_components<Position>()[entity];
-    if (!playerPosition.has_value()) {
-        throw std::runtime_error("Position component not found for entity");
-    }
-    bullets_.emplace_back(new Bullet(registry, playerPosition->x, playerPosition->y, 0.5f));
-    health -= 10;
-    return std::to_string(bullets_.back()->getEntity()) + ";" + std::to_string(playerPosition->x) + ";" + std::to_string(playerPosition->y);
-}
-
-std::vector<std::unique_ptr<Bullet>>& Player::getBullets() {
-    return bullets_;
-}

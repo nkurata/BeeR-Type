@@ -24,6 +24,16 @@ void Scene::updatePing() {
     ping_text_.setString("Ping: " + std::to_string(current_ping_) + " ms");
 }
 
+void Scene::packetLoss() {
+    sf::Text packetLoss_text;
+    packetLoss_text.setFont(font_);
+    packetLoss_text.setCharacterSize(24);
+    packetLoss_text.setFillColor(sf::Color::White);
+    packetLoss_text.setPosition(10, 30);
+    packetLoss_text.setString("Packet Loss: " + std::to_string(client.packetLost));
+    window.draw(packetLoss_text);
+}
+
 void Scene::addChatLog(const std::string& message) {
     chat_log_.push_back(message);
     if (chat_log_.size() > 10) {
@@ -39,5 +49,6 @@ void Scene::addChatLog(const std::string& message) {
 void Scene::renderOverlay() {
     window.draw(ping_text_);
     window.draw(chat_text_);
+    packetLoss();
 }
 

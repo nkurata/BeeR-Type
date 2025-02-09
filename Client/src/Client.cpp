@@ -12,7 +12,8 @@ Client::Client(boost::asio::io_context &io_context, const std::string &host, sho
     send_timer_(io_context),
     receive_timer_(io_context),
     currentScene(nullptr),
-    lastHeartbeatTime_(std::chrono::high_resolution_clock::now())
+    lastHeartbeatTime_(std::chrono::high_resolution_clock::now()),
+    reset_timer_(io_context)
 {
     // std::cout << "[DEBUG] Client constructor called" << std::endl;
     udp::resolver resolver(io_context);
@@ -22,6 +23,7 @@ Client::Client(boost::asio::io_context &io_context, const std::string &host, sho
 
     startReceive(); // Start the regulated receive
     startSendTimer(); // Start the send timer
+    startResetTimer(); // Start the reset timer
     receive_thread_ = std::thread(&Client::run_receive, this);
     // std::cout << "[DEBUG] Client constructor finished" << std::endl;
 
@@ -116,6 +118,19 @@ void Client::handleSendTimer(const boost::system::error_code& error) {
     }
 }
 
+void Client::startResetTimer() {
+    reset_timer_.expires_after(std::chrono::seconds(5));
+    reset_timer_.async_wait(boost::bind(&Client::handleResetTimer, this, boost::asio::placeholders::error));
+}
+
+void Client::handleResetTimer(const boost::system::error_code& error) {
+    if (!error) {
+        packetLost = 0; // Reset packet loss counter
+        startResetTimer(); // Restart the timer
+    } else {
+        std::cerr << "[ERROR] Reset timer error: " << error.message() << std::endl;
+    }
+}
 void Client::regulate_receive()
 {
     receive_timer_.expires_after(std::chrono::milliseconds(10)); // Set the interval to 10 milliseconds
@@ -186,38 +201,47 @@ std::vector<std::string> deserializePacket(const std::string packet_str)
     return elements;
 }
 
-void Client::parseMessage(std::string packet_data)
-{
+void Client::parseMessage(std::string packet_data) {
     if (packet_data.empty()) {
         std::cerr << "[ERROR] Empty packet data." << std::endl;
         return;
     }
     uint8_t packet_type = static_cast<uint8_t>(packet_data[0]);
-    
+
     std::vector<std::string> elements = deserializePacket(packet_data.substr(2));
     if (elements.empty()) {
         std::cerr << "[ERROR] Failed to parse packet data." << std::endl;
         return;
     }
 
-    if (packet_type == static_cast<uint8_t>(Network::PacketType::HEARTBEAT)) {
-        handleHeartbeatMessage(elements);
-        return;
-    }
-    if (elements.size() < 3) {
-        std::cerr << "[ERROR] Invalid packet data." << std::endl;
-        return;
-    }
-    if (packet_type == static_cast<uint8_t>(Network::PacketType::GAME_START)) {
-        switchScene(SceneType::Game);
-        return;
-    }
-
     try {
+        int packetNumber = std::stoi(elements.back());
+        std::cout << "Packet number:" << packetNumber << std::endl;
+        std::cout << "Last Packet:" << lastPacketnb << std::endl;
+        std::cout << "Packet Lost:" << packetLost << std::endl;
+        if (packetNumber - lastPacketnb > 1) {
+            packetLost += packetNumber - lastPacketnb - 1;
+        }
+        lastPacketnb = packetNumber;
+
+        if (packet_type == static_cast<uint8_t>(Network::PacketType::HEARTBEAT)) {
+            handleHeartbeatMessage(elements);
+            return;
+        }
+        if (elements.size() < 3) {
+            std::cerr << "[ERROR] Invalid packet data." << std::endl;
+            return;
+        }
+        if (packet_type == static_cast<uint8_t>(Network::PacketType::GAME_START)) {
+            switchScene(SceneType::Game);
+            return;
+        }
+
         action = static_cast<int>(packet_type);
         server_id = std::stoi(elements[0]);
         new_x = std::stof(elements[1]);
         new_y = std::stof(elements[2]);
+
     } catch (const std::exception& e) {
         std::cerr << "[ERROR] Failed to parse packet data: " << e.what() << std::endl;
     }
@@ -251,10 +275,6 @@ void Client::handleHeartbeatMessage(std::vector<std::string> elements) {
     auto now = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double, std::milli> elapsed = now - heartBeatStart_;
     ping_ = elapsed.count();
-
-    // Print the content of the heartbeat message
-    // std::cout << "[DEBUG] Heartbeat message content: " << data << std::endl;
-    // std::cout << "[DEBUG] Calculated ping: " << ping_ << " ms" << std::endl;
 }
 
 int Client::clientLoop()

@@ -25,7 +25,6 @@ public:
     void spawnBoss(float x, float y);
     void spawnPlayer(int playerId, float x, float y);
     void spawnBullet(int playerId);
-    void spawnBlast(int playerId);
     void killBosses(int entityId);
     void killBullets(int entityId);
     void killEnemies(int entityId);
@@ -55,8 +54,9 @@ public:
 private:
 
     std::unordered_map<int, std::unique_ptr<Player>> players;
-    std::vector<std::unique_ptr<Enemy>> enemies;
-    std::vector<std::unique_ptr<Boss>> bosses;
+    std::unordered_map<int, std::unique_ptr<Enemy>> enemies;
+    std::unordered_map<int, std::unique_ptr<Boss>> bosses;
+    std::unordered_map<int, std::unique_ptr<Bullet>> bullets;
 
     Server* server_;
     Registry registry;
@@ -64,6 +64,9 @@ private:
     std::uniform_real_distribution<float> distX;
     std::uniform_real_distribution<float> distY;
     std::uniform_int_distribution<int> distTime;
+    int enemyId;
+    int bossId;
+    int bulletId;
     int currentWave;
     int enemiesPerWave;
     std::chrono::steady_clock::time_point lastSpawnTime;

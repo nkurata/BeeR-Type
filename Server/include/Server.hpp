@@ -71,6 +71,7 @@ class Server {
         boost::asio::steady_timer send_timer_;
         boost::asio::steady_timer receive_timer_;
         std::queue<uint32_t> available_ids_;
+        int packetNb = 0;
 
 };
 
